@@ -1,0 +1,50 @@
+{
+  "demo-user": {
+    "userId": "demo-user",
+    "brandName": "Acme Co",
+    "colors": {
+      "primary": "#123456",
+      "secondary": "#abcdef"
+    },
+    "fonts": {
+      "heading": "Montserrat",
+      "body": "Lato"
+    },
+    "voice": "Playful and clear",
+    "style": {
+      "paragraphLength": "long",
+      "emojiUsage": "high",
+      "hashtags": 7
+    },
+    "templates": {
+      "promo": "Hook + benefits + CTA"
+    }
+  },
+  "guest-615ad2b2": {
+    "userId": "guest-615ad2b2",
+    "brandName": "TheGoGrow Company",
+    "colors": {
+      "primary": "#0A5BFF",
+      "secondary": "#111827"
+    },
+    "fonts": {
+      "heading": "Poppins",
+      "body": "Inter"
+    },
+    "voice": "Helpful, confident, and concise.",
+    "style": {
+      "paragraphLength": "short",
+      "emojiUsage": "low",
+      "hashtags": 5
+    },
+    "templates": {
+      "educational": "Hook + insight + CTA",
+      "promotional": "Problem + offer + urgency",
+      "custom_voice_instructions": ""
+    },
+    "logoUrl": "",
+    "aiProvider": "openrouter",
+    "aiModel": "",
+    "imageProvider": "openrouter"
+  }
+}

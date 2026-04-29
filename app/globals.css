@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f9fb;
+  --surface: #f7f9fb;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f4f6;
+  --surface-container: #eceef0;
+  --surface-container-high: #e6e8ea;
+  --surface-container-highest: #e0e3e5;
+  --on-surface: #191c1e;
+  --on-surface-variant: #434655;
+  --primary: #173ce5;
+  --primary-container: #3c59fd;
+  --primary-fixed: #dee0ff;
+  --on-primary: #ffffff;
+  --on-primary-fixed: #000f5d;
+  --secondary-fixed: #d5e3fc;
+  --on-secondary-fixed: #0d1c2e;
+  --outline-variant: #c3c6d7;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-on-primary: var(--on-primary);
+  --color-on-primary-fixed: var(--on-primary-fixed);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-on-secondary-fixed: var(--on-secondary-fixed);
+  --color-outline-variant: var(--outline-variant);
+  --font-body: var(--font-inter);
+  --font-headline: var(--font-manrope);
+  --font-label: var(--font-inter);
+}
+
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  background: var(--background);
+  color: var(--on-surface);
+}
+
+.font-headline {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+}
+
+.btn-gradient {
+  background: linear-gradient(135deg, var(--primary), var(--primary-container));
+  box-shadow: 0 10px 24px rgba(23, 60, 229, 0.25);
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.btn-gradient:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.panel {
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  background: var(--surface-container-lowest);
+  border-radius: 1rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 450, "GRAD" 0, "opsz" 24;
+}
+
+.studio-page {
+  width: 100%;
+  padding-bottom: 7rem;
+}
+
+.studio-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, transparent);
+  background: color-mix(in srgb, var(--surface-container-lowest) 94%, transparent);
+  color: var(--primary);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.studio-card {
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 22%, transparent);
+  background: var(--surface-container-lowest);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.055);
+}

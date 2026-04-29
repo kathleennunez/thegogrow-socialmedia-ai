@@ -1,0 +1,38 @@
+[
+  {
+    "id": "guest-615ad2b2-notif-welcome",
+    "userId": "guest-615ad2b2",
+    "title": "Welcome to AI Studio",
+    "message": "Start by entering a topic and generating your first draft.",
+    "kind": "info",
+    "createdAt": "2026-04-22T17:14:31.741Z",
+    "read": true
+  },
+  {
+    "id": "guest-615ad2b2-notif-tip",
+    "userId": "guest-615ad2b2",
+    "title": "Tip: Save your drafts",
+    "message": "Use Save Draft so you can find your best outputs in Campaigns.",
+    "kind": "success",
+    "createdAt": "2026-04-22T16:24:31.741Z",
+    "read": true
+  },
+  {
+    "id": "local-user-notif-welcome",
+    "userId": "local-user",
+    "title": "Welcome to AI Studio",
+    "message": "Start by entering a topic and generating your first draft.",
+    "kind": "info",
+    "createdAt": "2026-04-22T19:43:50.960Z",
+    "read": true
+  },
+  {
+    "id": "local-user-notif-tip",
+    "userId": "local-user",
+    "title": "Tip: Save your drafts",
+    "message": "Use Save Draft so you can find your best outputs in Campaigns.",
+    "kind": "success",
+    "createdAt": "2026-04-22T18:53:50.960Z",
+    "read": true
+  }
+]
