@@ -44,6 +44,20 @@ type CardScheduleInput = {
   time: string;
 };
 
+type DashboardIdea = {
+  title: string;
+  hook: string;
+  angle: string;
+  whyNow: string;
+  platform: string;
+};
+
+type TrendSignalLink = {
+  title: string;
+  url: string;
+  source?: string;
+};
+
 const STAGES: Array<{ key: Stage; label: string }> = [
   { key: "idea", label: "Idea" },
   { key: "brief", label: "Brief" },
@@ -90,6 +104,12 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [customRefine, setCustomRefine] = useState("");
   const [selectedStylizer, setSelectedStylizer] = useState<string | null>(null);
+  const [ideaBoard, setIdeaBoard] = useState<DashboardIdea[]>([]);
+  const [trendSignalLinks, setTrendSignalLinks] = useState<TrendSignalLink[]>([]);
+  const [isIdeaBoardLoading, setIsIdeaBoardLoading] = useState(false);
+  const [ideaBoardError, setIdeaBoardError] = useState<string | null>(null);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [activeDraftText, setActiveDraftText] = useState("");
 
   const selectedCards = useMemo(
     () => cards.filter((card) => selectedCardIds.includes(card.id)),
@@ -116,8 +136,10 @@ export default function HomePage() {
     }
   };
 
-  const buildBrief = async () => {
-    if (!idea.trim()) {
+  const buildBrief = async (seedIdea?: unknown) => {
+    const candidate = typeof seedIdea === "string" ? seedIdea : idea;
+    const baseIdea = candidate.trim();
+    if (!baseIdea) {
       setNotice("Add an idea first.");
       return;
     }
@@ -127,7 +149,7 @@ export default function HomePage() {
       const response = await fetch("/api/generate/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea }),
+        body: JSON.stringify({ idea: baseIdea }),
       });
       const data = (await response.json()) as { brief?: Brief; error?: string };
       if (!response.ok || !data.brief) throw new Error(data.error ?? "Failed to build brief.");
@@ -391,6 +413,39 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  const refreshIdeaBoard = async () => {
+    if (!user?.id || stage !== "idea") return;
+    setIsIdeaBoardLoading(true);
+    setIdeaBoardError(null);
+    try {
+      const response = await fetch("/api/dashboard/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const payload = (await response.json()) as {
+        ideas?: DashboardIdea[];
+        trendSignals?: string[];
+        trendSignalLinks?: TrendSignalLink[];
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to load AI post ideas.");
+      }
+      setIdeaBoard(payload.ideas ?? []);
+      setTrendSignalLinks(payload.trendSignalLinks ?? []);
+    } catch (error) {
+      setIdeaBoardError(error instanceof Error ? error.message : "Failed to load AI post ideas.");
+    } finally {
+      setIsIdeaBoardLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshIdeaBoard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, user?.id]);
+
   const scheduleSelected = async () => {
     if (!user?.id) return;
 
@@ -519,6 +574,88 @@ export default function HomePage() {
     );
   };
 
+  const activeDraftCard = useMemo(
+    () => cards.find((card) => card.id === activeDraftId) ?? null,
+    [activeDraftId, cards],
+  );
+
+  const openDraftPreview = (card: CampaignCard) => {
+    setActiveDraftId(card.id);
+    setActiveDraftText(card.text);
+  };
+
+  const saveDraftPreview = () => {
+    if (!activeDraftCard) return;
+    const trimmed = activeDraftText.trim();
+    if (!trimmed) {
+      setNotice("Draft text cannot be empty.", "error");
+      return;
+    }
+    setCards((current) =>
+      current.map((card) => (card.id === activeDraftCard.id ? { ...card, text: trimmed } : card)),
+    );
+    setNotice("Draft updated.", "success");
+  };
+
+  const copyDraftPreview = async () => {
+    const trimmed = activeDraftText.trim();
+    if (!trimmed) {
+      setNotice("Nothing to copy.", "error");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(trimmed);
+      setNotice("Draft copied.", "success");
+    } catch {
+      setNotice("Unable to copy draft.", "error");
+    }
+  };
+
+  const downloadDraftImage = async () => {
+    const imageUrl = activeDraftCard?.mediaUrl?.trim();
+    if (!imageUrl) {
+      setNotice("No image available to download.", "error");
+      return;
+    }
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Image request failed (${response.status})`);
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const ext = blob.type.includes("png") ? "png" : blob.type.includes("webp") ? "webp" : "jpg";
+      anchor.href = objectUrl;
+      anchor.download = `draft-${activeDraftCard?.id || "image"}.${ext}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+      setNotice("Image download started.", "success");
+    } catch {
+      window.open(imageUrl, "_blank", "noopener,noreferrer");
+      setNotice("Opened image in a new tab.", "info");
+    }
+  };
+
+  const applyIdeaToComposer = (ideaItem: DashboardIdea) => {
+    const composed = [ideaItem.title, ideaItem.hook, `Angle: ${ideaItem.angle}`, `Why now: ${ideaItem.whyNow}`]
+      .filter(Boolean)
+      .join("\n");
+    setIdea(composed);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setNotice("Idea applied to composer.", "success");
+  };
+
+  const buildBriefFromIdea = async (ideaItem: DashboardIdea) => {
+    const composed = [ideaItem.title, ideaItem.hook, `Angle: ${ideaItem.angle}`, `Why now: ${ideaItem.whyNow}`]
+      .filter(Boolean)
+      .join("\n");
+    setIdea(composed);
+    await buildBrief(composed);
+  };
+
   return (
     <div className="mx-auto w-full max-w-7xl pb-28">
       <header className="mb-8">
@@ -573,33 +710,36 @@ export default function HomePage() {
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-10">
         <section className="xl:col-span-7">
           {stage === "idea" ? (
-            <div className="rounded-xl border border-outline-variant/15 bg-surface-container-lowest p-8">
-              <div className="max-w-3xl">
-                <h2 className="font-headline text-3xl font-extrabold tracking-tight">Start with one idea</h2>
-                <p className="mt-2 text-on-surface-variant">
-                  Our AI will transform your concept into a structured campaign ready for distribution.
-                </p>
-                <label className="mt-6 block text-xs font-bold uppercase tracking-[0.16em] text-primary">
-                  Campaign Catalyst
-                </label>
-                <textarea
-                  value={idea}
-                  onChange={(event) => setIdea(event.target.value)}
-                  placeholder="What are you promoting or talking about this week?"
-                  rows={6}
-                  className="mt-3 w-full rounded-xl border-none bg-surface-container-low p-5 text-base leading-7 text-on-surface placeholder:text-on-surface-variant/50"
-                />
-                <div className="mt-5 flex items-center justify-end gap-4">
-                  <button
-                    type="button"
-                    onClick={buildBrief}
-                    disabled={isLoading}
-                    className="rounded-lg bg-gradient-to-r from-primary to-primary-container px-7 py-3 text-sm font-bold text-white shadow-[0_12px_24px_rgba(23,60,229,0.24)]"
-                  >
-                    {isLoading ? "Building..." : "Build Brief"}
-                  </button>
+            <div className="space-y-8">
+              <div className="rounded-xl border border-outline-variant/15 bg-surface-container-lowest p-8">
+                <div className="max-w-3xl">
+                  <h2 className="font-headline text-3xl font-extrabold tracking-tight">Start with one idea</h2>
+                  <p className="mt-2 text-on-surface-variant">
+                    Our AI will transform your concept into a structured campaign ready for distribution.
+                  </p>
+                  <label className="mt-6 block text-xs font-bold uppercase tracking-[0.16em] text-primary">
+                    Campaign Catalyst
+                  </label>
+                  <textarea
+                    value={idea}
+                    onChange={(event) => setIdea(event.target.value)}
+                    placeholder="What are you promoting or talking about this week?"
+                    rows={6}
+                    className="mt-3 w-full rounded-xl border-none bg-surface-container-low p-5 text-base leading-7 text-on-surface placeholder:text-on-surface-variant/50"
+                  />
+                  <div className="mt-5 flex items-center justify-end gap-4">
+                    <button
+                      type="button"
+                      onClick={() => void buildBrief()}
+                      disabled={isLoading}
+                      className="rounded-lg bg-gradient-to-r from-primary to-primary-container px-7 py-3 text-sm font-bold text-white shadow-[0_12px_24px_rgba(23,60,229,0.24)]"
+                    >
+                      {isLoading ? "Building..." : "Build Brief"}
+                    </button>
+                  </div>
                 </div>
               </div>
+
             </div>
           ) : null}
 
@@ -827,88 +967,75 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {cards.map((card) => (
-                <article key={card.id} className="group rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-6 shadow-[0px_8px_22px_rgba(25,28,30,0.05)] transition-all hover:-translate-y-[2px] hover:shadow-[0px_14px_28px_rgba(25,28,30,0.08)]">
-                  <div className="mb-6 flex items-start justify-between">
-                    <div className="flex items-center gap-3">
+                <article key={card.id} className="group rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm transition-all hover:-translate-y-[2px] hover:shadow-md">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
                       <span className="rounded-full bg-surface-container-high px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                        {card.purpose}
+                        {card.platform}
                       </span>
-                      <span className="material-symbols-outlined text-xl text-primary">hub</span>
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-on-surface-variant">{card.purpose}</p>
                     </div>
-                    <label className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant">
-                      <input type="checkbox" checked={selectedCardIds.includes(card.id)} onChange={() => toggleSelectCard(card.id)} />
-                      {card.platform}
-                    </label>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-8">
-                    <div className="col-span-7">
-                      <div className="min-h-[140px] rounded-xl bg-surface-container-low p-4">
-                        <p className="whitespace-pre-wrap text-sm leading-7 text-on-surface">{card.text}</p>
-                      </div>
-                      <div className="mt-6 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!selectedCardIds.includes(card.id)) {
-                              toggleSelectCard(card.id);
-                            }
-                            setNotice("Draft selected.", "success");
-                          }}
-                          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white"
-                        >
-                          <span className="material-symbols-outlined text-sm">check</span>
-                          Use
-                        </button>
-                        {[
-                          "Remix",
-                          "Shorten",
-                          "Bolder",
-                        ].map((label) => (
-                          <button
-                            key={label}
-                            type="button"
-                            onClick={() =>
-                              void refineCard(
-                                card.id,
-                                label === "Remix"
-                                  ? "Remix this while preserving core meaning."
-                                  : label === "Shorten"
-                                    ? "Make this 30% shorter."
-                                    : "Make this bolder with a stronger hook.",
-                              )
-                            }
-                            className="flex items-center gap-2 rounded-lg border border-outline-variant/30 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container"
-                          >
-                            <span className="material-symbols-outlined text-sm">
-                              {label === "Remix" ? "refresh" : label === "Shorten" ? "compress" : "bolt"}
-                            </span>
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="col-span-5">
+                  <button
+                    type="button"
+                    onClick={() => openDraftPreview(card)}
+                    className="w-full text-left"
+                  >
+                    <div className="mb-4 h-48 overflow-hidden rounded-xl bg-surface-container-high">
                       {card.mediaUrl ? (
-                        <div className="group relative h-full overflow-hidden rounded-xl bg-surface-container-high">
-                          <img src={card.mediaUrl} alt="Generated media" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
-                          <div className="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase">
-                            Preview
-                          </div>
-                        </div>
+                        <img src={card.mediaUrl} alt="Generated media" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       ) : (
-                        <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant/50 bg-surface-container-high p-6 text-center">
-                          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
-                            <span className="material-symbols-outlined text-primary">image</span>
-                          </div>
-                          <p className="text-xs font-bold text-on-surface">Visual Idea</p>
-                          <p className="mt-2 max-w-[140px] text-[10px] leading-tight text-on-surface-variant">{card.imageIdea}</p>
-                        </div>
+                        <div className="flex h-full items-center justify-center text-sm text-on-surface-variant">No media preview</div>
                       )}
                     </div>
+                    <p className="line-clamp-3 text-sm leading-6 text-on-surface">{card.text}</p>
+                  </button>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleSelectCard(card.id);
+                        const isSelected = selectedCardIds.includes(card.id);
+                        setNotice(isSelected ? "Draft unselected." : "Draft selected.", "success");
+                      }}
+                      className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                        selectedCardIds.includes(card.id)
+                          ? "bg-primary text-white"
+                          : "border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container"
+                      }`}
+                    >
+                      {selectedCardIds.includes(card.id) ? "Unselect" : "Use"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openDraftPreview(card)}
+                      className="rounded-lg bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface"
+                    >
+                      Full Preview
+                    </button>
+                    {["Remix", "Shorten", "Bolder"].map((label) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() =>
+                          void refineCard(
+                            card.id,
+                            label === "Remix"
+                              ? "Remix this while preserving core meaning."
+                              : label === "Shorten"
+                                ? "Make this 30% shorter."
+                                : "Make this bolder with a stronger hook.",
+                          )
+                        }
+                        className="rounded-lg border border-outline-variant/30 px-3 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container"
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </article>
               ))}
@@ -1273,6 +1400,196 @@ export default function HomePage() {
           )}
         </aside>
       </div>
+
+      {stage === "idea" ? (
+        <section className="mt-10 space-y-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h3 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">AI Post Creation Ideas</h3>
+              <p className="mt-1 text-on-surface-variant">Generated from your brand profile, saved drafts, and trend/news signals.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void refreshIdeaBoard()}
+              disabled={isIdeaBoardLoading}
+              className="inline-flex items-center gap-2 rounded-lg bg-surface-container px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-on-surface-variant hover:bg-surface-container-high disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-[16px]">refresh</span>
+              {isIdeaBoardLoading ? "Refreshing..." : "Refresh Ideas"}
+            </button>
+          </div>
+
+          {ideaBoardError ? (
+            <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">{ideaBoardError}</div>
+          ) : null}
+
+          {isIdeaBoardLoading ? (
+            <div className="rounded-xl bg-surface-container-low p-4 text-sm text-on-surface-variant">Generating ideas...</div>
+          ) : null}
+
+          {!isIdeaBoardLoading && !ideaBoardError ? (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+              {ideaBoard.slice(0, 4).map((ideaItem, index) => (
+                <article
+                  key={`${ideaItem.title}-${index}`}
+                  onClick={() => applyIdeaToComposer(ideaItem)}
+                  className={`rounded-2xl border p-8 shadow-sm ${
+                    index === 1
+                      ? "border-primary/10 bg-primary text-white lg:col-span-4"
+                      : index === 2
+                        ? "border-outline-variant/10 bg-surface-container-low lg:col-span-4"
+                        : "border-outline-variant/10 bg-surface-container-lowest lg:col-span-8"
+                  } cursor-pointer flex h-full flex-col`}
+                >
+                  <div className="mb-4 flex items-start justify-between">
+                    <span
+                      className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                        index === 1 ? "bg-white/20 text-white" : "bg-secondary-container text-on-secondary-container"
+                      }`}
+                    >
+                      {ideaItem.platform || "SOCIAL"}
+                    </span>
+                    <span className={index === 1 ? "text-white/70" : "text-outline"}>Idea #{index + 1}</span>
+                  </div>
+                  <h4 className={`font-headline text-2xl font-bold ${index === 1 ? "text-white" : "text-on-surface"}`}>{ideaItem.title}</h4>
+                  <p className={`mt-4 text-sm ${index === 1 ? "text-white" : "text-on-surface"}`}>{ideaItem.hook}</p>
+                  <p className={`mt-3 text-xs ${index === 1 ? "text-white/85" : "text-on-surface-variant"}`}>{ideaItem.angle}</p>
+                  <p className={`mt-2 text-xs ${index === 1 ? "text-white/85" : "text-on-surface-variant"}`}>{ideaItem.whyNow}</p>
+                  <div className="mt-auto pt-6 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        applyIdeaToComposer(ideaItem);
+                      }}
+                      className={`rounded-lg px-4 py-2 text-xs font-bold ${
+                        index === 1 ? "bg-white text-primary" : "bg-primary text-white"
+                      }`}
+                    >
+                      Use Idea
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void buildBriefFromIdea(ideaItem);
+                      }}
+                      className={`rounded-lg px-4 py-2 text-xs font-bold ${
+                        index === 1
+                          ? "border border-white/40 text-white"
+                          : "border border-outline-variant/30 text-on-surface-variant"
+                      }`}
+                    >
+                      Build Brief
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+
+          <section className="rounded-2xl bg-surface-container-low p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h4 className="flex items-center gap-3 font-headline text-2xl font-bold">
+                <span className="material-symbols-outlined text-primary">sensors</span>
+                Trend Signals Used
+              </h4>
+            </div>
+            {trendSignalLinks.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {trendSignalLinks.slice(0, 4).map((signal, index) => (
+                  <a
+                    key={`${signal.url}-${index}`}
+                    href={signal.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group rounded-xl bg-surface-container-lowest p-5 transition hover:bg-surface-container-high"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">Signal {index + 1}</p>
+                    <p className="mt-2 text-sm font-semibold text-on-surface group-hover:text-primary">{signal.title}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">
+                      {signal.source ?? "news.google.com"}
+                    </p>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-on-surface-variant">No live signals available yet.</p>
+            )}
+          </section>
+        </section>
+      ) : null}
+
+      {activeDraftCard ? (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-4xl rounded-3xl border border-outline-variant/30 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold uppercase tracking-wide text-on-primary-fixed">
+                {activeDraftCard.platform}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveDraftId(null);
+                  setActiveDraftText("");
+                }}
+                className="rounded-lg bg-surface-container px-3 py-1.5 text-sm text-on-surface"
+              >
+                Close
+              </button>
+            </div>
+
+            {activeDraftCard.mediaUrl ? (
+              <div className="mb-4 h-80 w-full overflow-hidden rounded-2xl bg-surface-container-low">
+                <img src={activeDraftCard.mediaUrl} alt={activeDraftCard.purpose} className="h-full w-full object-contain" />
+              </div>
+            ) : (
+              <div className="mb-4 flex h-48 items-center justify-center rounded-2xl bg-surface-container-low text-sm text-on-surface-variant">
+                No image generated
+              </div>
+            )}
+
+            <label className="block text-xs font-bold uppercase tracking-[0.15em] text-on-surface-variant">
+              Draft Content
+            </label>
+            <textarea
+              value={activeDraftText}
+              onChange={(event) => setActiveDraftText(event.target.value)}
+              rows={7}
+              className="mt-2 w-full rounded-2xl border-none bg-surface-container px-4 py-3 text-sm leading-7 text-on-surface focus:ring-1 focus:ring-primary/40"
+            />
+
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={copyDraftPreview}
+                className="inline-flex items-center gap-2 rounded-lg bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface"
+              >
+                <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                Copy
+              </button>
+              {activeDraftCard.mediaUrl ? (
+                <button
+                  type="button"
+                  onClick={downloadDraftImage}
+                  className="inline-flex items-center gap-2 rounded-lg bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface"
+                >
+                  <span className="material-symbols-outlined text-[16px]">download</span>
+                  Download Image
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={saveDraftPreview}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+              >
+                <span className="material-symbols-outlined text-[16px]">save</span>
+                Save Draft
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

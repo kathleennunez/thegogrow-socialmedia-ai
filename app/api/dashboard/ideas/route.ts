@@ -7,6 +7,12 @@ type IdeasRequestBody = {
   userId?: string;
 };
 
+type TrendSignal = {
+  title: string;
+  url: string;
+  source?: string;
+};
+
 const decodeXmlEntities = (value: string) =>
   value
     .replace(/&amp;/g, "&")
@@ -26,7 +32,7 @@ const extractTag = (block: string, tag: string) => {
   return plainMatch?.[1] ? decodeXmlEntities(plainMatch[1].trim()) : "";
 };
 
-const fetchTrendSignals = async (brandName: string): Promise<string[]> => {
+const fetchTrendSignals = async (brandName: string): Promise<TrendSignal[]> => {
   const baseTerms = [brandName, "social media marketing", "content strategy", "digital marketing trends"]
     .filter(Boolean)
     .join(" OR ");
@@ -47,12 +53,17 @@ const fetchTrendSignals = async (brandName: string): Promise<string[]> => {
     .map((item) => {
       const title = extractTag(item, "title");
       const source = extractTag(item, "source");
+      const link = extractTag(item, "link");
       if (!title) {
-        return "";
+        return null;
       }
-      return source ? `${title} (${source})` : title;
+      return {
+        title,
+        url: link || "https://news.google.com",
+        source: source || undefined,
+      };
     })
-    .filter(Boolean);
+    .filter(Boolean) as TrendSignal[];
 };
 
 const fallbackIdeas = (brandName: string): DashboardIdea[] => [
@@ -107,7 +118,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ideas: ideas.length > 0 ? ideas : fallbackIdeas(settings.brandName || "Your brand"),
-      trendSignals,
+      trendSignals: trendSignals.map((signal) =>
+        signal.source ? `${signal.title} (${signal.source})` : signal.title,
+      ),
+      trendSignalLinks: trendSignals,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to generate dashboard ideas.";
