@@ -9,19 +9,20 @@ const DEFAULT_USER_ID = "local-user";
 
 const DEFAULT_SETTINGS: UserSettings = {
   userId: DEFAULT_USER_ID,
-  brandName: "",
+  brandName: "Rocket Engineers",
   logoUrl: "",
   aiProvider: "openrouter",
   aiModel: "",
   imageProvider: "openrouter",
-  colors: { primary: "#173ce5", secondary: "#03166e" },
+  colors: { primary: "#dc2626", secondary: "#000000" },
   fonts: { heading: "Manrope", body: "Inter" },
-  voice: "Professional & Authoritative",
-  style: { paragraphLength: "medium", emojiUsage: "low", hashtags: 5 },
+  voice: "Consultative & Insight-led",
+  style: { paragraphLength: "medium", emojiUsage: "none", hashtags: 4 },
   templates: {
-    educational: "Hook + value + CTA",
-    promotional: "Problem + offer + CTA",
-    custom_voice_instructions: "",
+    educational: "Hook with market shift + practical engineering insight + business outcome CTA",
+    promotional: "Business challenge + vetted engineering match + delivery confidence + consultation CTA",
+    custom_voice_instructions:
+      "Write for CTOs and business leaders. Emphasize vetted partners, cloud-native expertise, and measurable outcomes.",
   },
 };
 
@@ -183,7 +184,7 @@ export default function SettingsPage() {
           <input
             value={settings.brandName}
             onChange={(e) => setSettings({ ...settings, brandName: e.target.value })}
-            placeholder="e.g. TheGoGrow"
+            placeholder="e.g. Rocket Engineers"
             className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
           />
 
@@ -195,6 +196,7 @@ export default function SettingsPage() {
             onChange={(e) => setSettings({ ...settings, voice: e.target.value })}
             className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
           >
+            <option>Consultative &amp; Insight-led</option>
             <option>Professional &amp; Authoritative</option>
             <option>Casual &amp; Playful</option>
             <option>Inspirational &amp; Bold</option>
@@ -215,7 +217,7 @@ export default function SettingsPage() {
               })
             }
             className="mt-2 w-full rounded-xl border-none bg-surface-container px-4 py-3 text-sm"
-            placeholder="e.g. Avoid jargon, prefer short sentences, end with a practical CTA."
+            placeholder="e.g. Write for CTOs and business leaders. Emphasize vetted partners, cloud-native expertise, and measurable outcomes."
           />
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -231,6 +233,7 @@ export default function SettingsPage() {
                     templates: { ...settings.templates, educational: e.target.value },
                   })
                 }
+                placeholder="Hook with market shift + practical engineering insight + business outcome CTA"
                 className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
               />
             </div>
@@ -246,6 +249,7 @@ export default function SettingsPage() {
                     templates: { ...settings.templates, promotional: e.target.value },
                   })
                 }
+                placeholder="Business challenge + vetted engineering match + delivery confidence + consultation CTA"
                 className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
               />
             </div>

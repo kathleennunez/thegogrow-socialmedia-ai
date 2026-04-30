@@ -41,16 +41,13 @@ export default function DashboardPage() {
     count: 0,
   });
   const [ideas, setIdeas] = useState<DashboardIdea[]>([]);
-  const [trendSignals, setTrendSignals] = useState<string[]>([]);
   const [isIdeasLoading, setIsIdeasLoading] = useState(false);
-  const [ideasError, setIdeasError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refreshIdeas = useCallback(async () => {
     if (!user?.id) return;
     setIsIdeasLoading(true);
-    setIdeasError(null);
     try {
       const ideasResponse = await fetch("/api/dashboard/ideas", {
         method: "POST",
@@ -59,17 +56,15 @@ export default function DashboardPage() {
       });
       const ideasPayload = (await ideasResponse.json()) as {
         ideas?: DashboardIdea[];
-        trendSignals?: string[];
         error?: string;
       };
       if (!ideasResponse.ok) {
         throw new Error(ideasPayload.error ?? "Failed to load AI ideas.");
       }
       setIdeas(ideasPayload.ideas ?? []);
-      setTrendSignals(ideasPayload.trendSignals ?? []);
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : "Failed to load AI ideas.";
-      setIdeasError(message);
+      setError(message);
     } finally {
       setIsIdeasLoading(false);
     }
@@ -128,7 +123,6 @@ export default function DashboardPage() {
       } catch (loadError) {
         const message = loadError instanceof Error ? loadError.message : "Failed to load dashboard.";
         setError(message);
-        setIdeasError(message);
       } finally {
         setIsLoading(false);
       }
@@ -324,54 +318,6 @@ export default function DashboardPage() {
         </article>
       </section>
 
-      <section className="rounded-3xl bg-surface-container-low p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-headline text-2xl font-extrabold tracking-tight">AI Post Creation Ideas</h2>
-          <button
-            type="button"
-            onClick={() => void refreshIdeas()}
-            className="inline-flex items-center gap-2 rounded-lg bg-surface-container-lowest px-4 py-2 text-sm font-semibold text-on-surface"
-          >
-            <span className="material-symbols-outlined text-[18px]">refresh</span>
-            {isIdeasLoading ? "Refreshing..." : "Refresh Ideas"}
-          </button>
-        </div>
-
-        {ideasError ? <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">{ideasError}</p> : null}
-
-        {!ideasError && ideas.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-            {ideas.map((idea, index) => (
-              <article key={`${idea.title}-${index}`} className="rounded-2xl bg-surface-container-lowest p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">{idea.platform || "SOCIAL"}</span>
-                  <span className="rounded-full bg-primary-fixed px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-on-primary-fixed">
-                    Idea {index + 1}
-                  </span>
-                </div>
-                <h3 className="text-base font-bold text-on-surface">{idea.title}</h3>
-                <p className="mt-2 text-sm text-on-surface"><span className="font-semibold">Hook:</span> {idea.hook}</p>
-                <p className="mt-2 text-sm text-on-surface"><span className="font-semibold">Angle:</span> {idea.angle}</p>
-              </article>
-            ))}
-          </div>
-        ) : null}
-
-        {!ideasError && ideas.length === 0 && !isIdeasLoading ? (
-          <p className="rounded-xl bg-surface-container-lowest p-4 text-sm text-on-surface-variant">No ideas yet. Refresh to generate suggestions.</p>
-        ) : null}
-
-        {trendSignals.length > 0 ? (
-          <div className="mt-4 rounded-2xl bg-surface-container-lowest p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-on-surface-variant">Trend Signals Used</p>
-            <div className="mt-2 space-y-1">
-              {trendSignals.slice(0, 5).map((signal, index) => (
-                <p key={`${signal}-${index}`} className="text-sm text-on-surface-variant">{index + 1}. {signal}</p>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </section>
     </div>
   );
 }

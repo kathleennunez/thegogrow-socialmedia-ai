@@ -101,6 +101,9 @@ export async function POST(request: Request) {
 
     const [settings, posts] = await Promise.all([getUserSettings(userId), getPosts(userId)]);
     const trendSignals = await fetchTrendSignals(settings.brandName).catch(() => []);
+    const trendSignalPhrases = trendSignals.map((signal) =>
+      signal.source ? `${signal.title} (${signal.source})` : signal.title,
+    );
 
     const ideas = await generateDashboardIdeas(
       settings,
@@ -113,14 +116,12 @@ export async function POST(request: Request) {
           text: post.text,
           savedAt: post.savedAt,
         })),
-      trendSignals,
+      trendSignalPhrases,
     ).catch(() => []);
 
     return NextResponse.json({
       ideas: ideas.length > 0 ? ideas : fallbackIdeas(settings.brandName || "Your brand"),
-      trendSignals: trendSignals.map((signal) =>
-        signal.source ? `${signal.title} (${signal.source})` : signal.title,
-      ),
+      trendSignals: trendSignalPhrases,
       trendSignalLinks: trendSignals,
     });
   } catch (error) {

@@ -6,27 +6,29 @@ const SETTINGS_FILE_PATH = path.join(process.cwd(), "data", "settings.json");
 
 export const getDefaultUserSettings = (userId: string): UserSettings => ({
   userId,
-  brandName: "TheGoGrow",
+  brandName: "Rocket Engineers",
   aiProvider: "openrouter",
   aiModel: "",
   imageProvider: "openrouter",
   colors: {
-    primary: "#0A5BFF",
-    secondary: "#111827",
+    primary: "#DC2626",
+    secondary: "#000000",
   },
   fonts: {
-    heading: "Poppins",
+    heading: "Manrope",
     body: "Inter",
   },
-  voice: "Helpful, confident, and concise.",
+  voice: "Consultative & Insight-led",
   style: {
-    paragraphLength: "short",
-    emojiUsage: "low",
-    hashtags: 5,
+    paragraphLength: "medium",
+    emojiUsage: "none",
+    hashtags: 4,
   },
   templates: {
-    educational: "Hook + insight + CTA",
-    promotional: "Problem + offer + urgency",
+    educational: "Hook with market shift + practical engineering insight + business outcome CTA",
+    promotional: "Business challenge + vetted engineering match + delivery confidence + consultation CTA",
+    custom_voice_instructions:
+      "Write for CTOs and business leaders. Emphasize vetted partners, cloud-native expertise, and measurable outcomes.",
   },
 });
 

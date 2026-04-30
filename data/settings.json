@@ -46,5 +46,32 @@
     "aiProvider": "openrouter",
     "aiModel": "",
     "imageProvider": "openrouter"
+  },
+  "local-user": {
+    "userId": "local-user",
+    "brandName": "Rocket Engineers",
+    "aiProvider": "openrouter",
+    "aiModel": "",
+    "imageProvider": "openrouter",
+    "colors": {
+      "primary": "#ff0000",
+      "secondary": "#000000"
+    },
+    "fonts": {
+      "heading": "Manrope",
+      "body": "Inter"
+    },
+    "voice": "Consultative & Insight-led",
+    "style": {
+      "paragraphLength": "medium",
+      "emojiUsage": "none",
+      "hashtags": 4
+    },
+    "templates": {
+      "educational": "Hook with market shift + practical engineering insight + business outcome CTA",
+      "promotional": "Business challenge + vetted engineering match + delivery confidence + consultation CTA",
+      "custom_voice_instructions": "Write for CTOs and business leaders. Emphasize vetted partners, cloud-native expertise, and measurable outcomes."
+    },
+    "logoUrl": ""
   }
 }
