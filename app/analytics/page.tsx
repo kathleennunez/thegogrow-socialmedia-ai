@@ -129,6 +129,7 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.impressions - a.impressions);
   }, [filteredSnapshots]);
 
+  // Aggregate post-level metrics for top-performing rows.
   const topPosts = useMemo(() => {
     const byPost = new Map<string, { impressions: number; engagement: number; clicks: number; platform: string }>();
     for (const row of filteredSnapshots) {
