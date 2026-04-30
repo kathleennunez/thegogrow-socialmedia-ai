@@ -46,7 +46,7 @@ export default function SettingsPage() {
       const response = await fetch(`/api/settings?userId=${encodeURIComponent(user.id)}`);
       const data = (await response.json()) as { settings?: UserSettings };
       if (data.settings) {
-        const next = {
+        const next: UserSettings = {
           ...data.settings,
           logoUrl: data.settings.logoUrl ?? "",
           aiProvider: "openrouter",
