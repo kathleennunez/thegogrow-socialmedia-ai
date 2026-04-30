@@ -231,7 +231,7 @@ export async function disconnectSocialAccount(userId: string, accountId: string)
     `,
       [now, accountId, userId, workspaceId],
     );
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   const store = await readStore();
