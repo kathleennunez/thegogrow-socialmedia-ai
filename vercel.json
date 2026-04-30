@@ -2,15 +2,15 @@
   "crons": [
     {
       "path": "/api/worker/publish",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 13 * * *"
     },
     {
       "path": "/api/social/refresh",
-      "schedule": "*/10 * * * *"
+      "schedule": "10 13 * * *"
     },
     {
       "path": "/api/analytics/linkedin/pull",
-      "schedule": "0 1 * * *"
+      "schedule": "20 13 * * *"
     }
   ]
 }
