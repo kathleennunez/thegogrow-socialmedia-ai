@@ -10,7 +10,7 @@ type AppChromeProps = {
   children: ReactNode;
 };
 
-const navItems = [
+const navItems: Array<{ href: string; label: string; icon: string; enabled?: boolean }> = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
   { href: "/", label: "AI Studio", icon: "auto_awesome" },
   { href: "/saved", label: "Saved Drafts", icon: "campaign" },
