@@ -96,7 +96,7 @@ export async function deletePost(userId: string, postId: string): Promise<boolea
     `,
       [workspaceIdForUser(userId), userId, postId],
     );
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   try {
