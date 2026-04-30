@@ -145,7 +145,6 @@ export default function AnalyticsPage() {
         const post = posts.find((p) => p.id === postId);
         return {
           postId,
-          platform: metrics.platform,
           text: post?.text ?? "Unknown post",
           savedAt: post?.savedAt ?? "",
           image: post?.media?.imageUrl,
