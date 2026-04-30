@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import { AppChrome } from "@/components/AppChrome";
+import { ToastProvider } from "@/components/ToastProvider";
 import { UserProvider } from "@/components/UserProvider";
 import "./globals.css";
 
@@ -34,7 +35,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full">
         <UserProvider>
-          <AppChrome>{children}</AppChrome>
+          <ToastProvider>
+            <AppChrome>{children}</AppChrome>
+          </ToastProvider>
         </UserProvider>
       </body>
     </html>

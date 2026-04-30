@@ -1,24 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useToast } from "@/components/ToastProvider";
 import type { Post } from "@/types";
 
 export function PostCard({ post }: { post: Post }) {
+  const toast = useToast();
   const [text, setText] = useState(post.text);
   const [isSaving, setIsSaving] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
   const media = post.media;
   const providerLabel =
     media?.provider === "nanobanana" ? "Nanobanana" : "OpenRouter";
-
-  useEffect(() => {
-    if (!toastMessage) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => setToastMessage(""), 2200);
-    return () => window.clearTimeout(timeoutId);
-  }, [toastMessage]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -41,10 +33,10 @@ export function PostCard({ post }: { post: Post }) {
         throw new Error(errorData?.error ?? "Failed to save post.");
       }
 
-      setToastMessage("Post saved.");
+      toast.success("Post saved.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to save post.";
-      setToastMessage(message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -107,12 +99,6 @@ export function PostCard({ post }: { post: Post }) {
           {isSaving ? "Saving..." : "Save"}
         </button>
       </div>
-
-      {toastMessage ? (
-        <div className="pointer-events-none fixed bottom-6 right-6 rounded-xl bg-on-surface px-4 py-2 text-sm text-white shadow-xl">
-          {toastMessage}
-        </div>
-      ) : null}
     </article>
   );
 }

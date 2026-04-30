@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useToast } from "@/components/ToastProvider";
 import { useAppUser } from "@/components/UserProvider";
 import type { UserSettings } from "@/types";
 
-const DEFAULT_USER_ID = "demo-user";
+const DEFAULT_USER_ID = "local-user";
 
 const DEFAULT_SETTINGS: UserSettings = {
   userId: DEFAULT_USER_ID,
@@ -24,20 +25,15 @@ const DEFAULT_SETTINGS: UserSettings = {
   },
 };
 
-type SaveStatus = {
-  kind: "success" | "error";
-  message: string;
-} | null;
-
 const clampHashtags = (value: number) => Math.min(15, Math.max(0, value));
 
 export default function SettingsPage() {
   const { user, isReady } = useAppUser();
+  const toast = useToast();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [initialSettings, setInitialSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>(null);
   const logoFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -73,17 +69,16 @@ export default function SettingsPage() {
 
   const handleDiscard = () => {
     setSettings(initialSettings);
-    setSaveStatus({ kind: "success", message: "Unsaved changes discarded." });
+    toast.success("Unsaved changes discarded.");
   };
 
   const handleSave = async () => {
     if (!user?.id) {
-      setSaveStatus({ kind: "error", message: "User session is not ready." });
+      toast.error("User session is not ready.");
       return;
     }
 
     setIsSaving(true);
-    setSaveStatus(null);
 
     const payload: UserSettings = {
       ...settings,
@@ -126,10 +121,10 @@ export default function SettingsPage() {
 
       setSettings(data.settings);
       setInitialSettings(data.settings);
-      setSaveStatus({ kind: "success", message: "Brand profile saved." });
+      toast.success("Brand profile saved.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to save settings.";
-      setSaveStatus({ kind: "error", message });
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -137,7 +132,6 @@ export default function SettingsPage() {
 
   const handleLogoUpload = async (file: File) => {
     setIsUploadingLogo(true);
-    setSaveStatus(null);
 
     try {
       const formData = new FormData();
@@ -154,10 +148,10 @@ export default function SettingsPage() {
       }
 
       setSettings((current) => ({ ...current, logoUrl: data.url as string }));
-      setSaveStatus({ kind: "success", message: "Logo uploaded. Save to apply permanently." });
+      toast.success("Logo uploaded. Save to apply permanently.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to upload logo.";
-      setSaveStatus({ kind: "error", message });
+      toast.error(message);
     } finally {
       setIsUploadingLogo(false);
       if (logoFileInputRef.current) {
@@ -476,13 +470,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="mt-8 flex items-center justify-between gap-3">
-        {saveStatus ? (
-          <p className={`text-sm ${saveStatus.kind === "success" ? "text-green-700" : "text-red-600"}`}>
-            {saveStatus.message}
-          </p>
-        ) : (
-          <span />
-        )}
+        <span />
 
         <div className="flex items-center gap-3">
           <button

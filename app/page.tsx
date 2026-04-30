@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAppUser } from "@/components/UserProvider";
+import { useToast } from "@/components/ToastProvider";
 import type { Post } from "@/types";
 
 type Stage = "idea" | "brief" | "drafts" | "schedule";
@@ -77,6 +78,7 @@ const PURPOSE_FALLBACK = ["Awareness", "Authority", "Conversion", "Engagement"];
 
 export default function HomePage() {
   const { user } = useAppUser();
+  const toast = useToast();
   const [stage, setStage] = useState<Stage>("idea");
   const [idea, setIdea] = useState("");
   const [brief, setBrief] = useState<Brief>(DEFAULT_BRIEF);
@@ -86,7 +88,6 @@ export default function HomePage() {
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [customRefine, setCustomRefine] = useState("");
   const [selectedStylizer, setSelectedStylizer] = useState<string | null>(null);
 
@@ -97,9 +98,16 @@ export default function HomePage() {
 
   const currentStageIndex = STAGES.findIndex((item) => item.key === stage);
 
-  const setNotice = (value: string) => {
-    setMessage(value);
-    window.setTimeout(() => setMessage(""), 2600);
+  const setNotice = (value: string, kind: "success" | "error" | "info" = "info") => {
+    if (kind === "success") {
+      toast.success(value);
+      return;
+    }
+    if (kind === "error") {
+      toast.error(value);
+      return;
+    }
+    toast.info(value);
   };
 
   const previousStage = () => {
@@ -126,7 +134,7 @@ export default function HomePage() {
       setBrief(data.brief);
       setStage("brief");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Failed to build brief.");
+      setNotice(error instanceof Error ? error.message : "Failed to build brief.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +142,7 @@ export default function HomePage() {
 
   const generatePack = async () => {
     if (!user?.id) {
-      setNotice("User session is not ready.");
+      setNotice("User session is not ready.", "error");
       return;
     }
 
@@ -143,16 +151,18 @@ export default function HomePage() {
       .filter(Boolean) as string[];
 
     if (!selectedPlatforms.length) {
-      setNotice("Choose at least one platform.");
+      setNotice("Choose at least one platform.", "error");
       return;
     }
 
     setIsLoading(true);
     try {
       const enrichedTopic = [
-        idea,
+        `Campaign Idea: ${idea.trim()}`,
         `Goal: ${brief.goal}`,
         `Audience: ${brief.audience}`,
+        `Target platforms: ${brief.platforms.join(", ")}`,
+        `Requested post count: ${brief.postCount}`,
         `Tone: ${brief.style.tone}`,
         `Length: ${brief.style.length}`,
         `CTA strength: ${brief.style.ctaStrength}`,
@@ -198,9 +208,9 @@ export default function HomePage() {
       setCards(nextCards);
       setSelectedCardIds(nextCards.map((card) => card.id));
       setStage("drafts");
-      setNotice("Campaign pack generated.");
+      setNotice("Campaign pack generated.", "success");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Failed to generate pack.");
+      setNotice(error instanceof Error ? error.message : "Failed to generate pack.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -238,9 +248,9 @@ export default function HomePage() {
             : item,
         ),
       );
-      setNotice("Draft refined.");
+      setNotice("Draft refined.", "success");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Failed to refine draft.");
+      setNotice(error instanceof Error ? error.message : "Failed to refine draft.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -291,9 +301,9 @@ export default function HomePage() {
         }),
       );
 
-      setNotice(`Refined ${results.length} draft${results.length === 1 ? "" : "s"}.`);
+      setNotice(`Refined ${results.length} draft${results.length === 1 ? "" : "s"}.`, "success");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Failed to refine drafts.");
+      setNotice(error instanceof Error ? error.message : "Failed to refine drafts.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -324,7 +334,7 @@ export default function HomePage() {
       });
       setStage("schedule");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Failed to load accounts.");
+      setNotice(error instanceof Error ? error.message : "Failed to load accounts.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -357,7 +367,7 @@ export default function HomePage() {
       }
       window.location.href = data.oauth.authorizeUrl;
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Failed to connect LinkedIn.");
+      setNotice(error instanceof Error ? error.message : "Failed to connect LinkedIn.", "error");
       setIsLoading(false);
     }
   };
@@ -373,10 +383,10 @@ export default function HomePage() {
       void loadConnectedAccounts();
     }
     if (connected === "1") {
-      setNotice("LinkedIn connected.");
+      setNotice("LinkedIn connected.", "success");
     }
     if (socialError) {
-      setNotice(`LinkedIn connect failed: ${socialError}`);
+      setNotice(`LinkedIn connect failed: ${socialError}`, "error");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -448,9 +458,9 @@ export default function HomePage() {
         }
       }
 
-      setNotice("Selected posts scheduled.");
+      setNotice("Selected posts scheduled.", "success");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Failed to schedule selected posts.");
+      setNotice(error instanceof Error ? error.message : "Failed to schedule selected posts.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -458,27 +468,31 @@ export default function HomePage() {
 
   const saveSelectedDrafts = async () => {
     if (!user?.id) {
-      setNotice("User session is not ready.");
+      setNotice("User session is not ready.", "error");
       return;
     }
     const targets = selectedCards.length > 0 ? selectedCards : cards;
     if (targets.length === 0) {
-      setNotice("No drafts to save.");
+      setNotice("No drafts to save.", "error");
       return;
     }
 
     setIsLoading(true);
     try {
       for (const card of targets) {
-        await fetch("/api/posts", {
+        const response = await fetch("/api/posts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(card.sourcePost),
         });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(payload?.error ?? "Failed to save one of the drafts.");
+        }
       }
-      setNotice(`Saved ${targets.length} draft${targets.length === 1 ? "" : "s"} to Saved Drafts.`);
+      setNotice(`Saved ${targets.length} draft${targets.length === 1 ? "" : "s"} to Saved Drafts.`, "success");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Failed to save drafts.");
+      setNotice(error instanceof Error ? error.message : "Failed to save drafts.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -815,10 +829,10 @@ export default function HomePage() {
 
               <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
               {cards.map((card) => (
-                <article key={card.id} className="rounded-xl bg-surface-container-lowest p-6 transition-all hover:-translate-y-[2px]">
+                <article key={card.id} className="group rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-6 shadow-[0px_8px_22px_rgba(25,28,30,0.05)] transition-all hover:-translate-y-[2px] hover:shadow-[0px_14px_28px_rgba(25,28,30,0.08)]">
                   <div className="mb-6 flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="rounded bg-surface-container-high px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                      <span className="rounded-full bg-surface-container-high px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
                         {card.purpose}
                       </span>
                       <span className="material-symbols-outlined text-xl text-primary">hub</span>
@@ -831,7 +845,7 @@ export default function HomePage() {
 
                   <div className="grid grid-cols-12 gap-8">
                     <div className="col-span-7">
-                      <div className="min-h-[120px] rounded-lg bg-surface-container-low p-4">
+                      <div className="min-h-[140px] rounded-xl bg-surface-container-low p-4">
                         <p className="whitespace-pre-wrap text-sm leading-7 text-on-surface">{card.text}</p>
                       </div>
                       <div className="mt-6 flex flex-wrap gap-2">
@@ -841,9 +855,9 @@ export default function HomePage() {
                             if (!selectedCardIds.includes(card.id)) {
                               toggleSelectCard(card.id);
                             }
-                            setNotice("Draft selected.");
+                            setNotice("Draft selected.", "success");
                           }}
-                          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-semibold text-white"
+                          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white"
                         >
                           <span className="material-symbols-outlined text-sm">check</span>
                           Use
@@ -866,7 +880,7 @@ export default function HomePage() {
                                     : "Make this bolder with a stronger hook.",
                               )
                             }
-                            className="flex items-center gap-2 rounded-md border border-outline-variant/30 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container"
+                            className="flex items-center gap-2 rounded-lg border border-outline-variant/30 px-4 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container"
                           >
                             <span className="material-symbols-outlined text-sm">
                               {label === "Remix" ? "refresh" : label === "Shorten" ? "compress" : "bolt"}
@@ -879,14 +893,14 @@ export default function HomePage() {
 
                     <div className="col-span-5">
                       {card.mediaUrl ? (
-                        <div className="group relative h-full overflow-hidden rounded-lg bg-surface-container-high">
-                          <img src={card.mediaUrl} alt="Generated media" className="h-full w-full object-contain" />
+                        <div className="group relative h-full overflow-hidden rounded-xl bg-surface-container-high">
+                          <img src={card.mediaUrl} alt="Generated media" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
                           <div className="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase">
                             Preview
                           </div>
                         </div>
                       ) : (
-                        <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-outline-variant/50 bg-surface-container-high p-6 text-center">
+                        <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant/50 bg-surface-container-high p-6 text-center">
                           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
                             <span className="material-symbols-outlined text-primary">image</span>
                           </div>
@@ -1259,12 +1273,6 @@ export default function HomePage() {
           )}
         </aside>
       </div>
-
-      {message ? (
-        <div className="fixed bottom-24 right-6 z-40 rounded-xl border border-outline-variant/30 bg-white px-4 py-2 text-sm shadow-xl">
-          {message}
-        </div>
-      ) : null}
     </div>
   );
 }

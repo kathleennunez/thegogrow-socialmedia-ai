@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "@/components/ToastProvider";
 import { useAppUser } from "@/components/UserProvider";
 import type { Post } from "@/types";
 
@@ -24,6 +25,7 @@ const itemsPerPage = 6;
 
 export default function SavedPage() {
   const { user, isReady } = useAppUser();
+  const toast = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [editedTitles, setEditedTitles] = useState<Record<string, string>>({});
   const [selectedPlatform, setSelectedPlatform] = useState("All Posts");
@@ -33,15 +35,21 @@ export default function SavedPage() {
   const [activeDraftText, setActiveDraftText] = useState("");
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
-  const [toastMessage, setToastMessage] = useState("");
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
   const [scheduleDraftId, setScheduleDraftId] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
 
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    window.setTimeout(() => setToastMessage(""), 2200);
+  const showToast = (message: string, kind: "success" | "error" | "info" = "info") => {
+    if (kind === "success") {
+      toast.success(message);
+      return;
+    }
+    if (kind === "error") {
+      toast.error(message);
+      return;
+    }
+    toast.info(message);
   };
 
   useEffect(() => {
@@ -129,7 +137,7 @@ export default function SavedPage() {
 
   const handleDeleteDraft = async (cardId: string) => {
     if (!user?.id) {
-      showToast("User session not ready.");
+      showToast("User session not ready.", "error");
       return;
     }
 
@@ -157,10 +165,10 @@ export default function SavedPage() {
         setActiveDraftText("");
       }
 
-      showToast("Draft deleted.");
+      showToast("Draft deleted.", "success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to delete draft.";
-      showToast(message);
+      showToast(message, "error");
     }
   };
 
@@ -168,34 +176,34 @@ export default function SavedPage() {
     if (!activeCard) return;
     const nextText = activeDraftText.trim();
     if (!nextText) {
-      showToast("Draft text cannot be empty.");
+      showToast("Draft text cannot be empty.", "error");
       return;
     }
 
     setEditedTitles((current) => ({ ...current, [activeCard.id]: nextText }));
     setActiveCard((current) => (current ? { ...current, title: nextText } : null));
-    showToast("Draft updated.");
+    showToast("Draft updated.", "success");
   };
 
   const copyActiveDraft = async () => {
     const nextText = activeDraftText.trim();
     if (!nextText) {
-      showToast("Nothing to copy.");
+      showToast("Nothing to copy.", "error");
       return;
     }
 
     try {
       await navigator.clipboard.writeText(nextText);
-      showToast("Draft copied.");
+      showToast("Draft copied.", "success");
     } catch {
-      showToast("Unable to copy draft.");
+      showToast("Unable to copy draft.", "error");
     }
   };
 
   const downloadActiveImage = async () => {
     const imageUrl = activeCard?.image?.trim();
     if (!imageUrl) {
-      showToast("No image available to download.");
+      showToast("No image available to download.", "error");
       return;
     }
 
@@ -215,23 +223,23 @@ export default function SavedPage() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(objectUrl);
-      showToast("Image download started.");
+      showToast("Image download started.", "success");
     } catch {
       window.open(imageUrl, "_blank", "noopener,noreferrer");
-      showToast("Opened image in a new tab.");
+      showToast("Opened image in a new tab.", "info");
     }
   };
 
   const scheduleDraft = async () => {
     if (!user?.id || !scheduleDraftId) return;
     if (!scheduleDate || !scheduleTime) {
-      showToast("Choose date and time.");
+      showToast("Choose date and time.", "error");
       return;
     }
 
     const post = posts.find((item) => item.id === scheduleDraftId);
     if (!post) {
-      showToast("Draft not found.");
+      showToast("Draft not found.", "error");
       return;
     }
 
@@ -247,7 +255,7 @@ export default function SavedPage() {
 
     const hasConnected = connectedAccounts.some((account) => account.status === "connected");
     if (!hasConnected) {
-      showToast("No connected channels. Connect LinkedIn first.");
+      showToast("No connected channels. Connect LinkedIn first.", "error");
       return;
     }
 
@@ -266,10 +274,10 @@ export default function SavedPage() {
       });
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) throw new Error(payload?.error ?? "Failed to schedule draft.");
-      showToast("Draft scheduled.");
+      showToast("Draft scheduled.", "success");
       setScheduleDraftId(null);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Failed to schedule draft.");
+      showToast(error instanceof Error ? error.message : "Failed to schedule draft.", "error");
     }
   };
 
@@ -490,12 +498,6 @@ export default function SavedPage() {
               </button>
             </div>
           </div>
-        </div>
-      ) : null}
-
-      {toastMessage ? (
-        <div className="fixed bottom-6 right-6 rounded-xl bg-on-surface px-4 py-2 text-sm text-white shadow-xl">
-          {toastMessage}
         </div>
       ) : null}
 
