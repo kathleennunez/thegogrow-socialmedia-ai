@@ -1,6 +1,7 @@
 import { getPostById } from "@/lib/store";
 import { claimDueJobs, markPublishJobFailed, markPublishJobPublished } from "@/lib/scheduling/store";
 import { getSocialAccountById, getSocialTokenByAccountId } from "@/lib/social/store";
+import { createNotification } from "@/lib/notifications";
 
 const LINKEDIN_POSTS_URL = "https://api.linkedin.com/rest/posts";
 
@@ -50,10 +51,12 @@ export async function runPublishWorker(limit = 20) {
   const results: Array<{ jobId: string; status: "published" | "failed"; error?: string }> = [];
 
   for (const job of dueJobs) {
+    let accountUserId = job.user_id;
     try {
       const account = await getSocialAccountById(job.social_account_id);
       const token = await getSocialTokenByAccountId(job.social_account_id);
       const post = account ? await getPostById(account.userId, job.post_id) : null;
+      accountUserId = account?.userId ?? accountUserId;
 
       if (!account || !token || !post) {
         throw new Error("Missing account, token, or post payload.");
@@ -73,6 +76,12 @@ export async function runPublishWorker(limit = 20) {
         providerPostId: published.providerPostId,
         permalink: published.permalink,
       });
+      await createNotification({
+        userId: account.userId,
+        kind: "success",
+        title: "Post published",
+        message: `Your ${job.platform.toUpperCase()} post was published successfully.`,
+      });
       results.push({ jobId: job.id, status: "published" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Publish failed.";
@@ -82,6 +91,14 @@ export async function runPublishWorker(limit = 20) {
         retryCount: job.retry_count,
         maxRetries: 5,
       });
+      if (accountUserId) {
+        await createNotification({
+          userId: accountUserId,
+          kind: "warning",
+          title: "Post publish failed",
+          message: `${job.platform.toUpperCase()} publish failed: ${message}`,
+        });
+      }
       results.push({ jobId: job.id, status: "failed", error: message });
     }
   }

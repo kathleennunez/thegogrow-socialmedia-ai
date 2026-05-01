@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAppUser } from "@/components/UserProvider";
 import type { Post } from "@/types";
 
@@ -46,6 +47,7 @@ function safePct(current: number, base: number) {
 }
 
 export default function AnalyticsPage() {
+  const router = useRouter();
   const { user, isReady } = useAppUser();
   const [posts, setPosts] = useState<Post[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummary>({
@@ -57,6 +59,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState<"7d" | "30d" | "90d">("30d");
+  const [platformFilter, setPlatformFilter] = useState<string>("all");
 
   useEffect(() => {
     const load = async () => {
@@ -105,11 +108,23 @@ export default function AnalyticsPage() {
     }
   }, [isReady, user?.id]);
 
+  const availablePlatforms = useMemo(() => {
+    const snapshotPlatforms = (analytics.snapshots ?? []).map((item) => item.platform.toLowerCase());
+    const postPlatforms = posts.flatMap((post) => post.platforms.map((platform) => platform.toLowerCase()));
+    const all = Array.from(new Set([...snapshotPlatforms, ...postPlatforms])).filter(Boolean);
+    return all.sort((a, b) => a.localeCompare(b));
+  }, [analytics.snapshots, posts]);
+
   const filteredSnapshots = useMemo(() => {
     const days = range === "7d" ? 7 : range === "30d" ? 30 : 90;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    return (analytics.snapshots ?? []).filter((item) => new Date(item.snapshotDate).getTime() >= cutoff);
-  }, [analytics.snapshots, range]);
+    return (analytics.snapshots ?? []).filter((item) => {
+      const inDateRange = new Date(item.snapshotDate).getTime() >= cutoff;
+      const inPlatform =
+        platformFilter === "all" || item.platform.toLowerCase() === platformFilter.toLowerCase();
+      return inDateRange && inPlatform;
+    });
+  }, [analytics.snapshots, range, platformFilter]);
 
   const aggregateByPlatform = useMemo(() => {
     const map = new Map<string, { impressions: number; engagement: number; clicks: number }>();
@@ -161,6 +176,13 @@ export default function AnalyticsPage() {
   const engagementRate = totalReach > 0 ? (totalEngagement / totalReach) * 100 : 0;
   const postSuccess = Math.min(100, Math.round((engagementRate * 8) + Math.min(20, analytics.count)));
 
+  const sendInsightToStudio = (idea: DashboardIdea) => {
+    const seed = [idea.title, idea.hook, `Angle: ${idea.angle}`, `Why now: ${idea.whyNow}`]
+      .filter(Boolean)
+      .join("\n");
+    router.push(`/?seedIdea=${encodeURIComponent(seed)}&stage=idea`);
+  };
+
   if (loading) {
     return <div className="rounded-2xl bg-surface-container-low p-6 text-sm text-on-surface-variant">Loading analytics...</div>;
   }
@@ -181,6 +203,22 @@ export default function AnalyticsPage() {
           <RangeButton label="Last 30 Days" active={range === "30d"} onClick={() => setRange("30d")} />
           <RangeButton label="90 Days" active={range === "90d"} onClick={() => setRange("90d")} />
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-surface-container-low p-2">
+        <PlatformFilterChip
+          label="All Platforms"
+          active={platformFilter === "all"}
+          onClick={() => setPlatformFilter("all")}
+        />
+        {availablePlatforms.map((platform) => (
+          <PlatformFilterChip
+            key={platform}
+            label={platform.toUpperCase()}
+            active={platformFilter === platform}
+            onClick={() => setPlatformFilter(platform)}
+          />
+        ))}
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -222,7 +260,12 @@ export default function AnalyticsPage() {
                 { title: "Content Optimization", hook: "Switching to short-form has higher retention.", angle: "Repurpose top post into 3 variants.", whyNow: "", platform: "LinkedIn" },
                 { title: "Best Timing", hook: "Audience peaks around your morning window.", angle: "Schedule core posts at peak.", whyNow: "", platform: "Instagram" },
               ]).map((idea, idx) => (
-                <div key={`${idea.title}-${idx}`} className="cursor-pointer rounded-2xl border border-transparent bg-white p-5 shadow-sm transition-transform hover:-translate-y-[2px] hover:border-primary/10">
+                <button
+                  key={`${idea.title}-${idx}`}
+                  type="button"
+                  onClick={() => sendInsightToStudio(idea)}
+                  className="w-full cursor-pointer rounded-2xl border border-transparent bg-white p-5 text-left shadow-sm transition-transform hover:-translate-y-[2px] hover:border-primary/10"
+                >
                   <div className="mb-3 flex items-start justify-between">
                     <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${idx % 2 === 0 ? "bg-secondary-container text-primary" : "bg-tertiary-fixed text-tertiary"}`}>
                       {idea.title}
@@ -233,7 +276,7 @@ export default function AnalyticsPage() {
                   <div className={`mt-4 flex items-center gap-2 text-xs font-bold ${idx % 2 === 0 ? "text-primary" : "text-tertiary"}`}>
                     {idea.angle || "Apply recommendation"} <span className="material-symbols-outlined text-sm">arrow_forward</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -271,10 +314,6 @@ export default function AnalyticsPage() {
       <div className="overflow-hidden rounded-3xl bg-surface-container-lowest shadow-[0px_8px_32px_rgba(25,28,30,0.04)]">
         <div className="flex items-center justify-between border-b border-slate-50 px-8 py-6">
           <h3 className="font-headline text-xl font-bold text-on-background">Top Performing Content</h3>
-          <Link href="/saved" className="flex items-center gap-2 text-sm font-bold text-primary hover:underline">
-            View Detailed Report
-            <span className="material-symbols-outlined text-sm">open_in_new</span>
-          </Link>
         </div>
 
         <div className="overflow-x-auto">
@@ -332,6 +371,28 @@ export default function AnalyticsPage() {
       </div>
 
     </div>
+  );
+}
+
+function PlatformFilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition ${
+        active ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:bg-white/60 hover:text-on-surface"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

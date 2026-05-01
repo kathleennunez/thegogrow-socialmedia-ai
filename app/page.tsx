@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAppUser } from "@/components/UserProvider";
 import { useToast } from "@/components/ToastProvider";
 import type { Post } from "@/types";
@@ -77,7 +78,7 @@ const PLATFORM_OPTIONS = [
 const DEFAULT_BRIEF: Brief = {
   goal: "engage",
   audience: "Founders and marketing teams",
-  platforms: ["linkedin", "instagram"],
+  platforms: ["linkedin"],
   postCount: 3,
   style: {
     tone: "Professional",
@@ -91,6 +92,7 @@ const DEFAULT_BRIEF: Brief = {
 const PURPOSE_FALLBACK = ["Awareness", "Authority", "Conversion", "Engagement"];
 
 export default function HomePage() {
+  const searchParams = useSearchParams();
   const { user } = useAppUser();
   const toast = useToast();
   const [stage, setStage] = useState<Stage>("idea");
@@ -110,6 +112,14 @@ export default function HomePage() {
   const [ideaBoardError, setIdeaBoardError] = useState<string | null>(null);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [activeDraftText, setActiveDraftText] = useState("");
+
+  useEffect(() => {
+    const seededIdea = searchParams.get("seedIdea")?.trim();
+    const seededStage = searchParams.get("stage")?.trim();
+    if (!seededIdea) return;
+    setIdea(seededIdea);
+    setStage(seededStage === "brief" || seededStage === "drafts" || seededStage === "schedule" ? seededStage : "idea");
+  }, [searchParams]);
 
   const selectedCards = useMemo(
     () => cards.filter((card) => selectedCardIds.includes(card.id)),
@@ -137,6 +147,10 @@ export default function HomePage() {
   };
 
   const buildBrief = async (seedIdea?: unknown) => {
+    if (!user?.id) {
+      setNotice("User session is not ready.", "error");
+      return;
+    }
     const candidate = typeof seedIdea === "string" ? seedIdea : idea;
     const baseIdea = candidate.trim();
     if (!baseIdea) {
@@ -149,7 +163,7 @@ export default function HomePage() {
       const response = await fetch("/api/generate/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: baseIdea }),
+        body: JSON.stringify({ idea: baseIdea, userId: user?.id }),
       });
       const data = (await response.json()) as { brief?: Brief; error?: string };
       if (!response.ok || !data.brief) throw new Error(data.error ?? "Failed to build brief.");
@@ -666,41 +680,42 @@ export default function HomePage() {
       </header>
 
       <section className="mb-8 px-2">
-        <div className="flex items-center justify-between gap-2">
+        <div className="grid w-full grid-cols-4 gap-2">
           {STAGES.map((item, index) => {
             const isActive = item.key === stage;
             const isPassed = index < currentStageIndex;
             return (
-              <div key={item.key} className="flex flex-1 items-center">
+              <div key={item.key} className="relative min-w-0">
+                {index < STAGES.length - 1 ? (
+                  <div
+                    className={`pointer-events-none absolute left-1/2 top-[18px] z-0 h-[2px] w-[calc(100%-1.75rem)] ${
+                      index < currentStageIndex ? "bg-primary/45" : "bg-surface-container-high"
+                    }`}
+                    style={{ marginLeft: "0.875rem" }}
+                  />
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setStage(item.key)}
-                  className="group flex flex-col items-center gap-2"
+                  className="group relative z-10 flex w-full min-w-0 flex-col items-center gap-1 rounded-lg px-1 py-1 text-center sm:px-2"
                 >
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition ${
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition ${
                       isActive || isPassed
-                        ? "bg-primary text-white shadow-[0_8px_18px_rgba(23,60,229,0.28)]"
+                        ? "bg-primary text-white shadow-[0_6px_14px_rgba(23,60,229,0.22)]"
                         : "bg-surface-container text-on-surface-variant"
                     }`}
                   >
                     {index + 1}
                   </div>
                   <span
-                    className={`text-xs font-semibold ${
+                    className={`truncate text-[11px] font-semibold sm:text-sm ${
                       isActive ? "text-primary" : "text-on-surface-variant"
                     }`}
                   >
                     {item.label}
                   </span>
                 </button>
-                {index < STAGES.length - 1 ? (
-                  <div
-                    className={`mx-3 h-[2px] flex-1 ${
-                      index < currentStageIndex ? "bg-primary/30" : "bg-surface-container"
-                    }`}
-                  />
-                ) : null}
               </div>
             );
           })}
@@ -745,17 +760,17 @@ export default function HomePage() {
 
           {stage === "brief" ? (
             <div className="space-y-8">
-              <section>
-                <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
-                  Define Your Creative North Star
-                </h2>
-                <p className="mt-2 max-w-2xl leading-relaxed text-on-surface-variant">
-                  Translate abstract ideas into a structured strategic brief. AI will use these parameters
-                  to curate your campaign intelligence.
-                </p>
-              </section>
-
               <div className="space-y-8 studio-card p-8">
+                <section>
+                  <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
+                    Define Your Creative North Star
+                  </h2>
+                  <p className="mt-2 max-w-2xl leading-relaxed text-on-surface-variant">
+                    Translate abstract ideas into a structured strategic brief. AI will use these parameters
+                    to curate your campaign intelligence.
+                  </p>
+                </section>
+
                 <div>
                   <label className="mb-3 ml-1 block text-xs font-bold uppercase tracking-[0.15em] text-on-surface-variant">
                     Primary Campaign Goal

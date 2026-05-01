@@ -20,11 +20,11 @@ const DEFAULT_SETTINGS: UserSettings = {
   style: { paragraphLength: "medium", emojiUsage: "none", hashtags: 4 },
   templates: {
     educational:
-      "Bridge business challenge + implementation insight + market context (EMEA/deep tech experience) + measurable outcome CTA",
+      "Bridge business challenge + implementation strategy + EMEA market insight + measurable business outcome CTA",
     promotional:
-      "Specific challenge + right engineering partner match + why implementation matters more than tools alone + clear next-step CTA",
+      "Specific challenge + expert engineering match + why execution matters beyond technology + clear next-step CTA",
     custom_voice_instructions:
-      "Write for CTOs, technology leaders, and business decision makers. Emphasize that technology alone does not solve problems; skilled implementation does. Position Rocket Engineers as the bridge between technology and business success, with deep EMEA market experience and a strong network matching solution providers with end-users facing specific challenges. Keep the tone confident, practical, and engineering-first.",
+      "Write for CTOs, technology leaders, end-users, and business decision makers. Position Rocket Engineers as the bridge between technology and business success. Emphasize decades of EMEA experience across technology providers, end-users, and solution providers. Reinforce that technology alone does not solve problems; skilled implementation transforms businesses. Highlight Rocket Engineers' network and market insight in matching solution providers with end-users facing specific challenges. Keep messaging practical, confident, engineering-first, and outcomes-focused.",
   },
 };
 
@@ -186,7 +186,7 @@ export default function SettingsPage() {
           <input
             value={settings.brandName}
             onChange={(e) => setSettings({ ...settings, brandName: e.target.value })}
-            placeholder="e.g. Rocket Engineers"
+            placeholder="Enter your company or brand name (shown in generated posts)."
             className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
           />
 
@@ -219,7 +219,7 @@ export default function SettingsPage() {
               })
             }
             className="mt-2 w-full rounded-xl border-none bg-surface-container px-4 py-3 text-sm"
-            placeholder="e.g. Write for CTOs and business leaders. Emphasize vetted partners, cloud-native expertise, and measurable outcomes."
+            placeholder="Describe tone rules, target audience, phrases to use/avoid, and CTA style."
           />
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -235,7 +235,7 @@ export default function SettingsPage() {
                     templates: { ...settings.templates, educational: e.target.value },
                   })
                 }
-                placeholder="Hook with market shift + practical engineering insight + business outcome CTA"
+                placeholder="Template guide: Hook + key insight + supporting proof + CTA."
                 className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
               />
             </div>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
                     templates: { ...settings.templates, promotional: e.target.value },
                   })
                 }
-                placeholder="Business challenge + vetted engineering match + delivery confidence + consultation CTA"
+                placeholder="Template guide: Problem + offer + credibility + next-step CTA."
                 className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
               />
             </div>
@@ -409,6 +409,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings({ ...settings, fonts: { ...settings.fonts, heading: e.target.value } })
                 }
+                placeholder="Heading font family (e.g. Manrope, Poppins, Montserrat)"
                 className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
               />
             </div>
@@ -421,6 +422,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings({ ...settings, fonts: { ...settings.fonts, body: e.target.value } })
                 }
+                placeholder="Body font family (e.g. Inter, Roboto, Open Sans)"
                 className="mt-2 h-12 w-full rounded-xl border-none bg-surface-container px-4 text-sm"
               />
             </div>
@@ -550,7 +552,7 @@ function ColorField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="h-10 flex-1 rounded-lg border-none bg-surface-container-low px-3 text-sm"
-          placeholder="#173ce5"
+          placeholder={label === "Primary" ? "Hex color (e.g. #dc2626)" : "Hex color (e.g. #000000)"}
         />
       </div>
     </div>

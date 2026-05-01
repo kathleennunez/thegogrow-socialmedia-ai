@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 export type AppNotification = {
   id: string;
@@ -102,4 +103,27 @@ export async function markNotificationRead(userId: string, notificationId: strin
   return updated
     .filter((notification) => notification.userId === userId)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function createNotification(input: {
+  userId: string;
+  title: string;
+  message: string;
+  kind?: AppNotification["kind"];
+}) {
+  const notifications = await readNotifications();
+  const now = new Date().toISOString();
+  const next: AppNotification = {
+    id: randomUUID(),
+    userId: input.userId,
+    title: input.title,
+    message: input.message,
+    kind: input.kind ?? "info",
+    createdAt: now,
+    read: false,
+  };
+
+  notifications.push(next);
+  await writeNotifications(notifications);
+  return next;
 }

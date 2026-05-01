@@ -26,11 +26,11 @@ export const getDefaultUserSettings = (userId: string): UserSettings => ({
   },
   templates: {
     educational:
-      "Bridge business challenge + implementation insight + market context (EMEA/deep tech experience) + measurable outcome CTA",
+      "Bridge business challenge + implementation strategy + EMEA market insight + measurable business outcome CTA",
     promotional:
-      "Specific challenge + right engineering partner match + why implementation matters more than tools alone + clear next-step CTA",
+      "Specific challenge + expert engineering match + why execution matters beyond technology + clear next-step CTA",
     custom_voice_instructions:
-      "Write for CTOs, technology leaders, and business decision makers. Emphasize that technology alone does not solve problems; skilled implementation does. Position Rocket Engineers as the bridge between technology and business success, with deep EMEA market experience and a strong network matching solution providers with end-users facing specific challenges. Keep the tone confident, practical, and engineering-first.",
+      "Write for CTOs, technology leaders, end-users, and business decision makers. Position Rocket Engineers as the bridge between technology and business success. Emphasize decades of EMEA experience across technology providers, end-users, and solution providers. Reinforce that technology alone does not solve problems; skilled implementation transforms businesses. Highlight Rocket Engineers' network and market insight in matching solution providers with end-users facing specific challenges. Keep messaging practical, confident, engineering-first, and outcomes-focused.",
   },
 });
 

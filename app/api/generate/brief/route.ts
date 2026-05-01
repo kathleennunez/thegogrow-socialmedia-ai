@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { getUserSettings } from "@/lib/settings";
 
 type BriefRequest = {
   idea?: string;
+  userId?: string;
 };
 
 const inferGoal = (idea: string) => {
@@ -16,24 +18,30 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as BriefRequest;
     const idea = body.idea?.trim();
+    const userId = body.userId?.trim();
 
-    if (!idea) {
-      return NextResponse.json({ error: "Missing required field: idea" }, { status: 400 });
+    if (!idea || !userId) {
+      return NextResponse.json({ error: "Missing required fields: idea, userId" }, { status: 400 });
     }
 
+    const settings = await getUserSettings(userId);
     const goal = inferGoal(idea);
+    const audienceFallback =
+      settings.templates.custom_voice_instructions?.match(/(CTOs?|technology leaders|business decision makers)/i)?.[0] ??
+      "Decision makers and target customers";
+
     return NextResponse.json({
       brief: {
         goal,
-        audience: "Founders and marketing teams",
-        platforms: ["linkedin", "instagram"],
+        audience: audienceFallback,
+        platforms: ["linkedin"],
         postCount: 3,
         style: {
-          tone: "Professional",
-          length: "medium",
+          tone: settings.voice || "Professional",
+          length: settings.style.paragraphLength ?? "medium",
           ctaStrength: "balanced",
-          emoji: "low",
-          hashtags: 5,
+          emoji: settings.style.emojiUsage ?? "low",
+          hashtags: settings.style.hashtags ?? 5,
         },
       },
     });

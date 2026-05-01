@@ -20,6 +20,18 @@ type AnalyticsSummary = {
     shares: number;
   };
   count: number;
+  snapshots?: Array<{
+    id: string;
+    postId: string;
+    platform: string;
+    snapshotDate: string;
+    impressions: number;
+    engagement: number;
+    clicks: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  }>;
 };
 
 type DashboardIdea = {
@@ -28,6 +40,11 @@ type DashboardIdea = {
   angle: string;
   whyNow: string;
   platform: string;
+};
+
+type UserSettingsLite = {
+  brandName?: string;
+  voice?: string;
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US");
@@ -41,7 +58,10 @@ export default function DashboardPage() {
     count: 0,
   });
   const [ideas, setIdeas] = useState<DashboardIdea[]>([]);
+  const [settings, setSettings] = useState<UserSettingsLite>({});
   const [isIdeasLoading, setIsIdeasLoading] = useState(false);
+  const [quickSummary, setQuickSummary] = useState<string>("");
+  const [quickSummaryUpdatedAt, setQuickSummaryUpdatedAt] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,10 +101,11 @@ export default function DashboardPage() {
       setError(null);
 
       try {
-        const [postsResponse, notificationsResponse, analyticsResponse] = await Promise.all([
+        const [postsResponse, notificationsResponse, analyticsResponse, settingsResponse] = await Promise.all([
           fetch(`/api/posts?userId=${encodeURIComponent(user.id)}`),
           fetch(`/api/notifications?userId=${encodeURIComponent(user.id)}`),
           fetch(`/api/analytics?userId=${encodeURIComponent(user.id)}`),
+          fetch(`/api/settings?userId=${encodeURIComponent(user.id)}`),
         ]);
 
         const postsPayload = (await postsResponse.json()) as { posts?: Post[]; error?: string };
@@ -95,6 +116,7 @@ export default function DashboardPage() {
         const analyticsPayload = (await analyticsResponse.json()) as
           | (AnalyticsSummary & { error?: string })
           | { error?: string };
+        const settingsPayload = (await settingsResponse.json()) as { settings?: UserSettingsLite; error?: string };
 
         if (!postsResponse.ok) {
           throw new Error(postsPayload.error ?? "Failed to load posts.");
@@ -104,6 +126,9 @@ export default function DashboardPage() {
         }
         if (!analyticsResponse.ok) {
           throw new Error(analyticsPayload.error ?? "Failed to load analytics.");
+        }
+        if (!settingsResponse.ok) {
+          throw new Error(settingsPayload.error ?? "Failed to load settings.");
         }
 
         setData({
@@ -117,7 +142,9 @@ export default function DashboardPage() {
               ? analyticsPayload.totals
               : { impressions: 0, engagement: 0, clicks: 0, likes: 0, comments: 0, shares: 0 },
           count: "count" in analyticsPayload ? analyticsPayload.count : 0,
+          snapshots: "snapshots" in analyticsPayload ? analyticsPayload.snapshots ?? [] : [],
         });
+        setSettings(settingsPayload.settings ?? {});
 
         await refreshIdeas();
       } catch (loadError) {
@@ -157,28 +184,82 @@ export default function DashboardPage() {
   }, [data.posts, data.unreadCount]);
 
   const platformPerformance = useMemo(() => {
-    const map = new Map<string, { posts: number; totalWords: number; lastSavedAt: number }>();
+    const analyticsSnapshots = analytics.snapshots ?? [];
+    if (analyticsSnapshots.length > 0) {
+      const byPlatform = new Map<string, { impressions: number; engagement: number; clicks: number }>();
+      for (const row of analyticsSnapshots) {
+        const key = (row.platform || "unknown").toUpperCase();
+        const current = byPlatform.get(key) ?? { impressions: 0, engagement: 0, clicks: 0 };
+        current.impressions += row.impressions;
+        current.engagement += row.engagement;
+        current.clicks += row.clicks;
+        byPlatform.set(key, current);
+      }
+      const totalImpressions = Array.from(byPlatform.values()).reduce((sum, item) => sum + item.impressions, 0);
+      return Array.from(byPlatform.entries())
+        .map(([platform, metrics]) => ({
+          platform,
+          posts: metrics.impressions,
+          share: totalImpressions > 0 ? (metrics.impressions / totalImpressions) * 100 : 0,
+          avgWords: metrics.engagement,
+          lastSavedAt: 0,
+          source: "analytics" as const,
+        }))
+        .sort((a, b) => b.posts - a.posts);
+    }
 
+    const postMap = new Map<string, { posts: number; totalWords: number; lastSavedAt: number }>();
     for (const post of data.posts) {
       const key = (post.platforms[0] || "unknown").toUpperCase();
-      const current = map.get(key) ?? { posts: 0, totalWords: 0, lastSavedAt: 0 };
+      const current = postMap.get(key) ?? { posts: 0, totalWords: 0, lastSavedAt: 0 };
       const words = post.text.trim().split(/\s+/).filter(Boolean).length;
       current.posts += 1;
       current.totalWords += words;
       current.lastSavedAt = Math.max(current.lastSavedAt, new Date(post.savedAt).getTime());
-      map.set(key, current);
+      postMap.set(key, current);
     }
-
-    return Array.from(map.entries())
+    return Array.from(postMap.entries())
       .map(([platform, metrics]) => ({
         platform,
         posts: metrics.posts,
         share: data.posts.length > 0 ? (metrics.posts / data.posts.length) * 100 : 0,
         avgWords: metrics.posts > 0 ? metrics.totalWords / metrics.posts : 0,
         lastSavedAt: metrics.lastSavedAt,
+        source: "posts" as const,
       }))
       .sort((a, b) => b.posts - a.posts);
-  }, [data.posts]);
+  }, [analytics, data.posts]);
+
+  const buildQuickSummary = useCallback(() => {
+    const top = platformPerformance[0];
+    if (!top) {
+      return `No performance data yet for ${settings.brandName ?? "your brand"}. Keep content in a ${(
+        settings.voice ?? "professional"
+      ).toLowerCase()} tone, publish initial drafts, then review first-week metrics.`;
+    }
+    if (top.source === "analytics") {
+      return `${settings.brandName ?? "Your brand"} · ${top.platform}: ${numberFormatter.format(top.posts)} impressions so far, ${numberFormatter.format(Math.round(top.avgWords))} engagements. Keep the next summary in a ${(
+        settings.voice ?? "professional"
+      ).toLowerCase()} voice and test one stronger CTA variation this week.`;
+    }
+    return `${settings.brandName ?? "Your brand"} · ${top.platform}: ${numberFormatter.format(top.posts)} saved drafts, ${Math.round(top.avgWords)} avg words. Publish 2–3 strongest drafts this week in a ${(
+      settings.voice ?? "professional"
+    ).toLowerCase()} style to start collecting measurable reach and engagement data.`;
+  }, [platformPerformance, settings.brandName, settings.voice]);
+
+  useEffect(() => {
+    setQuickSummary(buildQuickSummary());
+  }, [buildQuickSummary]);
+
+  const runCuratorAi = async () => {
+    setQuickSummary("Analyzing current metrics and regenerating weekly summary...");
+    await refreshIdeas();
+    const nextSummary = buildQuickSummary();
+    setQuickSummary(nextSummary);
+    setQuickSummaryUpdatedAt(
+      new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+    );
+  };
 
   const recentPosts = useMemo(
     () => [...data.posts].sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()).slice(0, 3),
@@ -243,15 +324,19 @@ export default function DashboardPage() {
             <h3 className="mb-4 font-headline text-2xl font-bold leading-tight">Regenerate weekly summary from current metrics</h3>
             <div className="rounded-2xl bg-white/80 p-4 text-on-surface backdrop-blur">
               <p className="text-xs font-medium leading-relaxed">
-                {ideas.length > 0
-                  ? `${ideas[0].platform}: ${ideas[0].hook}`
-                  : "LinkedIn engagement is rising. Generate ideas to capitalize on momentum."}
+                {ideas.length > 0 ? `${ideas[0].platform}: ${ideas[0].hook}` : quickSummary}
               </p>
+              {quickSummaryUpdatedAt ? (
+                <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                  Updated {quickSummaryUpdatedAt}
+                </p>
+              ) : null}
             </div>
           </div>
           <button
             type="button"
-            onClick={() => void refreshIdeas()}
+            onClick={() => void runCuratorAi()}
+            disabled={isIdeasLoading}
             className="mt-6 rounded-xl bg-white px-6 py-3 text-sm font-bold text-primary transition hover:bg-white/90"
           >
             {isIdeasLoading ? "Refreshing..." : "Start Curator AI"}
@@ -259,7 +344,7 @@ export default function DashboardPage() {
         </article>
       </section>
 
-      <section className="grid grid-cols-1 gap-8 xl:grid-cols-12">
+      <section className="mt-6 grid grid-cols-1 gap-8 xl:grid-cols-12">
         <article className="space-y-5 xl:col-span-5">
           <div className="flex items-center justify-between px-1">
             <h2 className="font-headline text-2xl font-extrabold tracking-tight">Platform Performance</h2>
@@ -276,8 +361,12 @@ export default function DashboardPage() {
                     <p className="text-[10px] font-black uppercase text-on-surface-variant">Share {percentFormatter.format(item.share)}%</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-primary">{numberFormatter.format(item.posts)}</p>
-                    <p className="text-[10px] font-bold text-emerald-600">Avg {Math.round(item.avgWords)} words</p>
+                    <p className="font-bold text-primary">
+                      {numberFormatter.format(item.posts)} {item.source === "analytics" ? "impr." : "posts"}
+                    </p>
+                    <p className="text-[10px] font-bold text-emerald-600">
+                      {item.source === "analytics" ? `${numberFormatter.format(Math.round(item.avgWords))} eng.` : `Avg ${Math.round(item.avgWords)} words`}
+                    </p>
                   </div>
                 </div>
               ))

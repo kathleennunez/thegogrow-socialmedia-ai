@@ -1,26 +1,4 @@
 {
-  "accounts": [
-    {
-      "id": "aeeb344f-f8c4-4fdd-a60e-63e040fe9b59",
-      "userId": "local-user",
-      "platform": "linkedin",
-      "providerAccountId": "hrQrmfzj4B",
-      "handle": "li_hrQrmfzj4B",
-      "displayName": "Kathleen Nuñez",
-      "scopes": [
-        "openid,profile,w_member_social"
-      ],
-      "status": "connected",
-      "connectedAt": "2026-04-29T12:59:55.096Z",
-      "updatedAt": "2026-04-29T12:59:55.096Z"
-    }
-  ],
-  "tokens": [
-    {
-      "accountId": "aeeb344f-f8c4-4fdd-a60e-63e040fe9b59",
-      "encryptedAccessToken": "coKesR8F6jXh6G7n.6TQvCT2PGqQvbcpNh85XEwopM4wOajms-JMfha7l8iyVJZYuS8Xrmdm9y8aQfNkNHQAFKHdHXrtYW7yKcFMJ2KJvd6xfmTJFKXWp-r62Hz_XLLHYh3MqrB-u5wtr8qz-mnZzcqhKFeRwhwjGYB9gfcZjDh6V_tk7lQGt8YcYBxu28FqdwMrEvhCLkPDa8thdyMtNxrTH5mkL1TG0xla1ahyu2VCryJ-xISIEO1JAr9SZZ6ZQeodrqYHUtA8jXVg9e9jsxRJDSPxXl05xgfRlIqi2FRhnLcRyA9NHo0MbQqjpcm3LaHgsvvoQ-FbXgmAUhKB6_3knLW_2sffh-Ac1V48WSCUht945-QugABWLz6bFg-0trU3FbDrrTTpIsQWY-TNDx5CHcysEVUv5lhe3E8mpoO9ZmsoQPJz_1iI8lOCXwcz30_AefY2Tklg53j_bViIG6DDoIQmVmSvZLYI.7UfEYw4aOpVRsxF_JZ8Q0g",
-      "expiresAt": "2026-06-28T12:59:52.523Z",
-      "updatedAt": "2026-04-29T12:59:55.096Z"
-    }
-  ]
+  "accounts": [],
+  "tokens": []
 }

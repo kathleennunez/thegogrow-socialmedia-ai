@@ -68,9 +68,9 @@
       "hashtags": 4
     },
     "templates": {
-      "educational": "Hook with market shift + practical engineering insight + business outcome CTA",
-      "promotional": "Business challenge + vetted engineering match + delivery confidence + consultation CTA",
-      "custom_voice_instructions": "Write for CTOs and business leaders. Emphasize vetted partners, cloud-native expertise, and measurable outcomes."
+      "educational": "Bridge business challenge + implementation strategy + EMEA market insight + measurable business outcome CTA",
+      "promotional": "Specific challenge + expert engineering match + why execution matters beyond technology + clear next-step CTA",
+      "custom_voice_instructions": "Write for CTOs, technology leaders, end-users, and business decision makers. Position Rocket Engineers as the bridge between technology and business success. Emphasize decades of EMEA experience across technology providers, end-users, and solution providers. Reinforce that technology alone does not solve problems; skilled implementation transforms businesses. Highlight Rocket Engineers' network and market insight in matching solution providers with end-users facing specific challenges. Keep messaging practical, confident, engineering-first, and outcomes-focused."
     },
     "logoUrl": ""
   }

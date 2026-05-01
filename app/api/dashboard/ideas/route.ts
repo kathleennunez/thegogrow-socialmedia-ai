@@ -66,18 +66,18 @@ const fetchTrendSignals = async (brandName: string): Promise<TrendSignal[]> => {
     .filter(Boolean) as TrendSignal[];
 };
 
-const fallbackIdeas = (brandName: string): DashboardIdea[] => [
+const fallbackIdeas = (brandName: string, voice: string): DashboardIdea[] => [
   {
     title: `${brandName} weekly market pulse`,
     hook: "What changed in your market this week and why should buyers care now?",
-    angle: "Recap key trend movements and connect them to customer decisions.",
+    angle: `Recap key trend movements in a ${voice.toLowerCase()} tone and connect them to customer decisions.`,
     whyNow: "Weekly cycles help audiences expect and engage with recurring value.",
     platform: "LINKEDIN",
   },
   {
     title: "Myth vs reality in your niche",
     hook: "Most teams still believe this outdated tactic. Here is what works today.",
-    angle: "Contrast old assumptions with current best practice.",
+    angle: `Contrast old assumptions with current best practice in ${brandName}'s perspective.`,
     whyNow: "Shifts in AI and platform algorithms are changing baseline strategy fast.",
     platform: "INSTAGRAM",
   },
@@ -88,7 +88,26 @@ const fallbackIdeas = (brandName: string): DashboardIdea[] => [
     whyNow: "Speed-to-insight content performs well while topics are fresh.",
     platform: "TWITTER",
   },
+  {
+    title: "Customer proof into thought leadership",
+    hook: "Turn one customer win into a practical framework others can copy.",
+    angle: "Use a real implementation story to teach repeatable strategy.",
+    whyNow: "Proof-based content builds trust faster than abstract claims.",
+    platform: "LINKEDIN",
+  },
 ];
+
+const ensureFourIdeas = (ideas: DashboardIdea[], brandName: string, voice: string): DashboardIdea[] => {
+  const seed = ideas.length > 0 ? ideas : fallbackIdeas(brandName, voice);
+  const fallback = fallbackIdeas(brandName, voice);
+  const normalized = seed.slice(0, 4);
+  let i = 0;
+  while (normalized.length < 4) {
+    normalized.push(fallback[i % fallback.length]);
+    i += 1;
+  }
+  return normalized;
+};
 
 export async function POST(request: Request) {
   try {
@@ -120,7 +139,7 @@ export async function POST(request: Request) {
     ).catch(() => []);
 
     return NextResponse.json({
-      ideas: ideas.length > 0 ? ideas : fallbackIdeas(settings.brandName || "Your brand"),
+      ideas: ensureFourIdeas(ideas, settings.brandName || "Your brand", settings.voice || "Professional"),
       trendSignals: trendSignalPhrases,
       trendSignalLinks: trendSignals,
     });

@@ -134,8 +134,17 @@ export function AppChrome({ children }: AppChromeProps) {
         </div>
       </aside>
 
-      <header className="fixed right-0 top-0 z-30 h-16 w-full border-b border-outline-variant/20 bg-background/80 px-5 backdrop-blur-md lg:left-[var(--sidebar-width)] lg:w-[calc(100%-var(--sidebar-width))] lg:px-8">
+      <header className="fixed right-0 top-0 z-30 h-16 w-full border-b border-outline-variant/20 bg-background/80 px-4 backdrop-blur-md sm:px-5 lg:left-[var(--sidebar-width)] lg:w-[calc(100%-var(--sidebar-width))] lg:px-8">
         <div className="flex h-full items-center justify-between gap-6">
+          <div className="flex items-center gap-2 lg:hidden">
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="rounded-lg bg-surface-container px-2 py-1 font-headline text-sm font-bold text-on-surface"
+            >
+              AI Studio
+            </button>
+          </div>
           <div className="hidden items-center gap-3 lg:flex">
             <button
               type="button"
@@ -156,7 +165,7 @@ export function AppChrome({ children }: AppChromeProps) {
               type="text"
             />
           </div>
-          <div className="ml-auto flex items-center gap-4 text-on-surface-variant">
+          <div className="ml-auto flex items-center gap-2 text-on-surface-variant sm:gap-4">
             <button
               type="button"
               onClick={() => router.push("/notifications")}
@@ -174,8 +183,28 @@ export function AppChrome({ children }: AppChromeProps) {
       </header>
 
       <div className="pt-16 lg:ml-[var(--sidebar-width)]">
-        <main className="px-5 py-8 lg:px-12">{children}</main>
+        <main className="px-4 py-6 pb-24 sm:px-5 lg:px-12 lg:py-8 lg:pb-8">{children}</main>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant/25 bg-background/95 px-2 py-2 backdrop-blur-md lg:hidden">
+        <div className="grid grid-cols-5 gap-1">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href === "/" && pathname === "/");
+            return (
+              <Link
+                key={`mobile-${item.href}`}
+                href={item.href}
+                className={`flex flex-col items-center justify-center rounded-lg py-2 text-[11px] font-semibold ${
+                  isActive ? "bg-surface-container text-primary" : "text-on-surface-variant"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[19px]">{item.icon}</span>
+                <span className="mt-0.5 w-full truncate px-0.5 text-center">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

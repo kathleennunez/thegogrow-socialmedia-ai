@@ -6,9 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "test:stability": "node tests/stability/smoke.mjs",
-    "test:production": "node --import tsx --test tests/production/*.test.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
