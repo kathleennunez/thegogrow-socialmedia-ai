@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isCronAuthorized } from "@/lib/cron-auth";
 import { refreshLinkedInToken } from "@/lib/social/linkedin";
 import { listExpiringTokens, updateSocialToken } from "@/lib/social/store";
+import { parseScopeString } from "@/lib/social/scopes";
 
 type RefreshRequest = {
   accountId?: string;
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
         accessToken: refreshed.accessToken,
         refreshToken: refreshed.refreshToken,
         expiresAt: refreshed.accessExpiresAt,
-        scopes: refreshed.scope?.split(/\s+/).filter(Boolean),
+        scopes: parseScopeString(refreshed.scope),
       });
       return NextResponse.json({ refreshed: 1 });
     }
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
         accessToken: refreshed.accessToken,
         refreshToken: refreshed.refreshToken,
         expiresAt: refreshed.accessExpiresAt,
-        scopes: refreshed.scope?.split(/\s+/).filter(Boolean),
+        scopes: parseScopeString(refreshed.scope),
       });
       refreshedCount += 1;
     }

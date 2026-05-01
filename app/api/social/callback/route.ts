@@ -3,6 +3,7 @@ import { parseOAuthState } from "@/lib/social/oauth";
 import { connectSocialAccount } from "@/lib/social/store";
 import { consumeStateNonce } from "@/lib/social/state-nonce";
 import { exchangeLinkedInCode, fetchLinkedInProfile } from "@/lib/social/linkedin";
+import { parseScopeString } from "@/lib/social/scopes";
 
 export async function GET(request: Request) {
   const { origin } = new URL(request.url);
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
       providerAccountId: profile.providerAccountId,
       handle: profile.handle,
       displayName: profile.displayName,
-      scopes: tokenSet.scope?.split(/\s+/).filter(Boolean) ?? [],
+      scopes: parseScopeString(tokenSet.scope),
       accessToken: tokenSet.accessToken,
       refreshToken: tokenSet.refreshToken,
       expiresAt: tokenSet.accessExpiresAt,

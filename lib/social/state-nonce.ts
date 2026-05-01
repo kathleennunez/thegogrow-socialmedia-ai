@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ensureSchemaOnce, hasDatabase, query } from "@/lib/db";
 
-const NONCE_FILE_PATH = path.join(process.cwd(), "data", "oauth-state-nonces.json");
+const NONCE_FILE_PATH = path.join("/tmp", "oauth-state-nonces.json");
 
 type NonceFileStore = {
   records: Array<{ nonce: string; expiresAt: string; usedAt?: string }>;

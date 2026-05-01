@@ -3,6 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ensureSchemaOnce, hasDatabase, query } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/social/security";
+import { normalizeScopes, parseScopeString } from "@/lib/social/scopes";
 import type { SocialAccount, SocialPlatform, SocialTokenRecord } from "@/lib/social/types";
 
 type SocialStore = {
@@ -89,7 +90,7 @@ export async function listSocialAccounts(userId: string): Promise<SocialAccount[
       providerAccountId: row.provider_account_id,
       handle: row.handle,
       displayName: row.display_name,
-      scopes: Array.isArray(row.scopes) ? row.scopes : [],
+      scopes: normalizeScopes(Array.isArray(row.scopes) ? row.scopes : []),
       status: row.status,
       connectedAt: row.connected_at,
       updatedAt: row.updated_at,
@@ -142,7 +143,18 @@ export async function connectSocialAccount(input: {
         status = 'connected',
         updated_at = excluded.updated_at
     `,
-      [accountId, workspaceId, input.userId, input.platform, input.providerAccountId, input.handle, input.displayName, JSON.stringify(input.scopes), connectedAt, now],
+      [
+        accountId,
+        workspaceId,
+        input.userId,
+        input.platform,
+        input.providerAccountId,
+        input.handle,
+        input.displayName,
+        JSON.stringify(normalizeScopes(input.scopes)),
+        connectedAt,
+        now,
+      ],
     );
 
     await query(
@@ -164,7 +176,7 @@ export async function connectSocialAccount(input: {
         input.refreshToken ? encryptSecret(input.refreshToken) : null,
         input.expiresAt ?? null,
         now,
-        input.scopes.join(" "),
+        normalizeScopes(input.scopes).join(" "),
       ],
     );
 
@@ -175,7 +187,7 @@ export async function connectSocialAccount(input: {
       providerAccountId: input.providerAccountId,
       handle: input.handle,
       displayName: input.displayName,
-      scopes: input.scopes,
+      scopes: normalizeScopes(input.scopes),
       status: "connected" as const,
       connectedAt,
       updatedAt: now,
@@ -198,7 +210,7 @@ export async function connectSocialAccount(input: {
     providerAccountId: input.providerAccountId,
     handle: input.handle,
     displayName: input.displayName,
-    scopes: input.scopes,
+    scopes: normalizeScopes(input.scopes),
     status: "connected",
     connectedAt: existing?.connectedAt ?? now,
     updatedAt: now,
@@ -281,7 +293,7 @@ export async function getSocialAccountById(accountId: string) {
       providerAccountId: row.provider_account_id,
       handle: row.handle,
       displayName: row.display_name,
-      scopes: Array.isArray(row.scopes) ? row.scopes : [],
+      scopes: normalizeScopes(Array.isArray(row.scopes) ? row.scopes : []),
       status: row.status,
       connectedAt: row.connected_at,
       updatedAt: row.updated_at,
@@ -317,7 +329,7 @@ export async function getSocialTokenByAccountId(accountId: string) {
       accessToken: decryptSecret(row.encrypted_access_token),
       refreshToken: row.encrypted_refresh_token ? decryptSecret(row.encrypted_refresh_token) : undefined,
       expiresAt: row.expires_at ?? undefined,
-      scopes: row.scopes?.split(/\s+/).filter(Boolean) ?? [],
+      scopes: parseScopeString(row.scopes),
     };
   }
 
