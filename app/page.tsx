@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppUser } from "@/components/UserProvider";
 import { useToast } from "@/components/ToastProvider";
@@ -91,7 +91,7 @@ const DEFAULT_BRIEF: Brief = {
 
 const PURPOSE_FALLBACK = ["Awareness", "Authority", "Conversion", "Engagement"];
 
-export default function HomePage() {
+function HomePageContent() {
   const searchParams = useSearchParams();
   const { user } = useAppUser();
   const toast = useToast();
@@ -1606,6 +1606,14 @@ export default function HomePage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomePageContent />
+    </Suspense>
   );
 }
 
