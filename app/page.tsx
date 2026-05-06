@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppUser } from "@/components/UserProvider";
 import { useToast } from "@/components/ToastProvider";
@@ -112,6 +112,7 @@ function HomePageContent() {
   const [ideaBoardError, setIdeaBoardError] = useState<string | null>(null);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [activeDraftText, setActiveDraftText] = useState("");
+  const hasAutoConnectAttemptedRef = useRef(false);
 
   useEffect(() => {
     const seededIdea = searchParams.get("seedIdea")?.trim();
@@ -426,6 +427,23 @@ function HomePageContent() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  useEffect(() => {
+    if (stage !== "schedule") return;
+    if (!user?.id) return;
+    if (isLoading) return;
+    if (hasAutoConnectAttemptedRef.current) return;
+
+    const hasConnected = connectedAccounts.some((account) => account.status === "connected");
+    if (hasConnected) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("social_error")) return;
+
+    hasAutoConnectAttemptedRef.current = true;
+    void connectLinkedIn();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, user?.id, connectedAccounts, isLoading]);
 
   const refreshIdeaBoard = async () => {
     if (!user?.id || stage !== "idea") return;

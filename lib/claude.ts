@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type { UserSettings } from "@/types";
 
 type GeneratedPost = {
@@ -43,43 +42,31 @@ type OpenRouterResponse = {
   };
 };
 
-const CLAUDE_MODEL_CANDIDATES = [
-  process.env.CLAUDE_MODEL,
-  "claude-sonnet-4-6",
-  "claude-sonnet-4-5-20250929",
-  "claude-opus-4-1-20250805",
-  "claude-sonnet-4-0",
-  "claude-3-7-sonnet-latest",
-].filter(Boolean) as string[];
-
-const OPENROUTER_DEFAULT_MODEL = "openrouter/auto";
+const OPENROUTER_DEFAULT_MODEL = "openai/gpt-4.1-mini";
 const OPENROUTER_API_URL =
   process.env.OPENROUTER_API_URL?.trim() || "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_FALLBACK_MODELS = [
-  "openrouter/auto",
-  "openrouter/free",
+const GPT_FALLBACK_MODELS = [
+  "openai/gpt-4.1-mini",
+  "openai/gpt-4.1",
+  "openai/gpt-4.1-nano",
 ];
-
-const isTextBlock = (
-  block: Anthropic.Messages.ContentBlock,
-): block is Anthropic.Messages.TextBlock => block.type === "text";
 
 const unique = (values: Array<string | undefined | null>) =>
   Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean) as string[]));
 
-const getAiProvider = (userSettings: UserSettings) =>
-  userSettings.aiProvider === "openrouter" ? "openrouter" : "claude";
-
-const getClaudeCandidates = (userSettings: UserSettings) =>
-  unique([userSettings.aiModel, ...CLAUDE_MODEL_CANDIDATES]);
+const isGptModel = (model: string) => {
+  const normalized = model.trim().toLowerCase();
+  return normalized.startsWith("openai/gpt-") || normalized.startsWith("gpt-");
+};
 
 const getOpenRouterCandidates = (userSettings: UserSettings) =>
   unique([
     userSettings.aiModel,
+    process.env.OPENAI_MODEL,
     process.env.OPENROUTER_MODEL,
     OPENROUTER_DEFAULT_MODEL,
-    ...OPENROUTER_FALLBACK_MODELS,
-  ]);
+    ...GPT_FALLBACK_MODELS,
+  ]).filter(isGptModel);
 
 const isRetryableOpenRouterError = (status: number, message: string) => {
   if ([408, 409, 425, 429, 500, 502, 503, 504].includes(status)) {
@@ -201,55 +188,6 @@ const extractOpenRouterText = (payload: OpenRouterResponse) => {
   return "";
 };
 
-const generateWithClaude = async (
-  system: string,
-  prompt: string,
-  maxTokens: number,
-  userSettings: UserSettings,
-) => {
-  if (!process.env.CLAUDE_API_KEY) {
-    throw new Error("Missing CLAUDE_API_KEY.");
-  }
-
-  const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
-  let response: Awaited<ReturnType<typeof anthropic.messages.create>> | null = null;
-  let lastError: unknown = null;
-
-  for (const model of getClaudeCandidates(userSettings)) {
-    try {
-      response = await anthropic.messages.create({
-        model,
-        max_tokens: maxTokens,
-        system,
-        messages: [
-          {
-            role: "user",
-            content: [{ type: "text", text: prompt }],
-          },
-        ],
-      });
-      break;
-    } catch (error) {
-      lastError = error;
-      const status = (error as { status?: number })?.status;
-      const message = (error as { message?: string })?.message ?? "";
-      const isModelNotFound = status === 404 || message.includes("not_found_error");
-      if (!isModelNotFound) {
-        throw error;
-      }
-    }
-  }
-
-  if (!response) {
-    if (lastError instanceof Error) {
-      throw lastError;
-    }
-    throw new Error("No available Claude model could be used for this request.");
-  }
-
-  return response.content.filter(isTextBlock).map((block) => block.text).join("\n").trim();
-};
-
 const generateWithOpenRouter = async (
   system: string,
   prompt: string,
@@ -262,8 +200,12 @@ const generateWithOpenRouter = async (
   }
 
   let lastError: unknown = null;
+  const candidates = getOpenRouterCandidates(userSettings);
+  if (!candidates.length) {
+    throw new Error("No GPT model is configured. Set OPENAI_MODEL or OPENROUTER_MODEL to a GPT model.");
+  }
 
-  for (const model of getOpenRouterCandidates(userSettings)) {
+  for (const model of candidates) {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const response = await fetch(OPENROUTER_API_URL, {
         method: "POST",
@@ -331,11 +273,7 @@ const generateText = async (
   maxTokens: number,
   userSettings: UserSettings,
 ) => {
-  if (getAiProvider(userSettings) === "openrouter") {
-    return generateWithOpenRouter(system, prompt, maxTokens, userSettings);
-  }
-
-  return generateWithClaude(system, prompt, maxTokens, userSettings);
+  return generateWithOpenRouter(system, prompt, maxTokens, userSettings);
 };
 
 export async function generatePosts(

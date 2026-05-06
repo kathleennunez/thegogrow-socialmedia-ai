@@ -9,7 +9,7 @@ type GenerateRequestBody = {
   topic?: string;
   platforms?: string[];
   userId?: string;
-  aiProviderOverride?: "claude" | "openrouter";
+  aiProviderOverride?: "openrouter";
   aiModelOverride?: string;
   imageProviderOverride?: "nanobanana" | "openrouter";
   skipMediaGeneration?: boolean;
@@ -36,10 +36,7 @@ export async function POST(request: Request) {
     }
 
     const userSettings = await getUserSettings(userId);
-    const resolvedAiProvider =
-      aiProviderOverride === "openrouter" || aiProviderOverride === "claude"
-        ? aiProviderOverride
-        : (userSettings.aiProvider ?? "claude");
+    const resolvedAiProvider = aiProviderOverride === "openrouter" ? aiProviderOverride : "openrouter";
 
     const effectiveUserSettings = {
       ...userSettings,
